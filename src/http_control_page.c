@@ -1,4 +1,5 @@
 #include "http_pages.h"
+#include "relay_http.h"
 #include "relay_config.h"
 #include "util.h"
 #include "mongoose.h"
@@ -12,10 +13,12 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
     size_t cap = 65536;
     size_t pos = 0;
     int i;
+    AppConfig *cfg = relay_http_config(srv);
 
     html = (char *)malloc(cap);
-    if (!html) {
+    if (!html || !cfg) {
         mg_http_reply(c, 500, "", "oom");
+        free(html);
         return;
     }
 
@@ -26,10 +29,10 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
         "<div class=\"config-col\">"
         "<h2>Relays</h2><p class=\"sub\">单通道 ON/OFF / 查询状态</p>");
 
-    for (i = 0; i < srv->cfg->n_relays; ++i) {
-        const RelayConfig *r = &srv->cfg->relays[i];
+    for (i = 0; i < cfg->n_relays; ++i) {
+        const RelayConfig *r = &cfg->relays[i];
         const char *port = relay_resolved_port(r->port, r->linux_port, r->windows_port,
-                                               srv->cfg->platform);
+                                               cfg->platform);
         int ch;
         pos += (size_t)snprintf(html + pos, cap - pos,
             "<article class=\"card%s\">"
@@ -58,8 +61,8 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
         "</div><div class=\"config-col\">"
         "<h2>Boards</h2><p class=\"sub\">板级 reset / upgrade / 自定义动作</p>");
 
-    for (i = 0; i < srv->cfg->n_boards; ++i) {
-        const BoardConfig *b = &srv->cfg->boards[i];
+    for (i = 0; i < cfg->n_boards; ++i) {
+        const BoardConfig *b = &cfg->boards[i];
         pos += (size_t)snprintf(html + pos, cap - pos,
             "<article class=\"card%s\">"
             "<h3>%s</h3>"

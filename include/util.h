@@ -24,6 +24,7 @@ void relay_log(const char *fmt, ...);
 const char *relay_detect_platform(void);
 const char *relay_resolved_port(const char *port, const char *linux_port,
                                  const char *windows_port, const char *platform);
+int relay_detect_lan_ip(char *buf, size_t cap);
 
 #ifdef __cplusplus
 }

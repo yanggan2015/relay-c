@@ -501,7 +501,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             return;
         }
         if (uri_eq(hm->uri, "/docs")) {
-            relay_http_page_docs(c, srv);
+            relay_http_page_docs(c, srv, hm);
             return;
         }
         if (uri_eq(hm->uri, "/config")) {
@@ -561,4 +561,12 @@ int relay_http_poll(RelayHttpServer *srv, int ms) {
 
 RelayService *relay_http_service(RelayHttpServer *srv) {
     return srv ? srv->service : NULL;
+}
+
+AppConfig *relay_http_config(RelayHttpServer *srv) {
+    return srv ? srv->cfg : NULL;
+}
+
+int relay_http_port(RelayHttpServer *srv) {
+    return srv ? srv->port : 0;
 }

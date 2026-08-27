@@ -16,6 +16,8 @@ int              relay_http_start(RelayHttpServer *srv, int port);
 void             relay_http_stop(RelayHttpServer *srv);
 int              relay_http_poll(RelayHttpServer *srv, int ms);
 RelayService    *relay_http_service(RelayHttpServer *srv);
+AppConfig       *relay_http_config(RelayHttpServer *srv);
+int              relay_http_port(RelayHttpServer *srv);
 
 #ifdef __cplusplus
 }

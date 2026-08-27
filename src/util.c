@@ -9,9 +9,14 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <unistd.h>
 #include <time.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #endif
 
 void relay_sleep_ms(unsigned int ms) {
@@ -153,4 +158,47 @@ const char *relay_resolved_port(const char *port, const char *linux_port,
     if (windows_port && windows_port[0]) return windows_port;
     if (linux_port && linux_port[0]) return linux_port;
     return "";
+}
+
+int relay_detect_lan_ip(char *buf, size_t cap) {
+#ifdef _WIN32
+    WSADATA wsa;
+    SOCKET s;
+    struct sockaddr_in remote, local;
+    int local_len = (int)sizeof(local);
+    if (!buf || cap == 0) return -1;
+    buf[0] = '\0';
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return -1;
+    s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (s == INVALID_SOCKET) {
+        WSACleanup();
+        return -1;
+    }
+    memset(&remote, 0, sizeof(remote));
+    remote.sin_family = AF_INET;
+    remote.sin_port = htons(80);
+    inet_pton(AF_INET, "8.8.8.8", &remote.sin_addr);
+    if (connect(s, (struct sockaddr *)&remote, sizeof(remote)) == 0 &&
+        getsockname(s, (struct sockaddr *)&local, &local_len) == 0)
+        inet_ntop(AF_INET, &local.sin_addr, buf, (socklen_t)cap);
+    closesocket(s);
+    WSACleanup();
+#else
+    int fd;
+    struct sockaddr_in remote, local;
+    socklen_t local_len = sizeof(local);
+    if (!buf || cap == 0) return -1;
+    buf[0] = '\0';
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) return -1;
+    memset(&remote, 0, sizeof(remote));
+    remote.sin_family = AF_INET;
+    remote.sin_port = htons(80);
+    inet_pton(AF_INET, "8.8.8.8", &remote.sin_addr);
+    if (connect(fd, (struct sockaddr *)&remote, sizeof(remote)) == 0 &&
+        getsockname(fd, (struct sockaddr *)&local, &local_len) == 0)
+        inet_ntop(AF_INET, &local.sin_addr, buf, cap);
+    close(fd);
+#endif
+    return buf[0] ? 0 : -1;
 }
