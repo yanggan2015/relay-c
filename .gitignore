@@ -1,0 +1,17 @@
+# Build output
+output/
+*.o
+*.exe
+*.dll
+*.a
+
+# Local runtime config (use boards.json.example as template)
+boards.json
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

@@ -1,0 +1,57 @@
+{
+  "server": {
+    "port": 18053
+  },
+  "relays": {
+    "com18_test": {
+      "enabled": true,
+      "windows_port": "COM18",
+      "linux_port": "/dev/ttyUSB0",
+      "relay_channels": 2,
+      "baudrate": 9600,
+      "io_inverted": false,
+      "channels": {
+        "1": {
+          "on":  { "hex": "A0 01 01 A2" },
+          "off": { "hex": "A0 01 00 A1" }
+        }
+      }
+    }
+  },
+  "boards": {
+    "demo_board": {
+      "enabled": true,
+      "reset": {
+        "enabled": true,
+        "relay": "com18_test",
+        "channel": 1,
+        "hold_seconds": 5,
+        "polarity_inverted": false
+      },
+      "upgrade_mode": {
+        "enabled": true,
+        "relay": "com18_test",
+        "channel": 2,
+        "polarity_inverted": false
+      },
+      "actions": {
+        "power_led": {
+          "enabled": true,
+          "label": "电源指示灯",
+          "relay": "com18_test",
+          "channel": 2,
+          "mode": "hold_on"
+        },
+        "custom_pulse": {
+          "enabled": true,
+          "label": "自定义脉冲",
+          "relay": "com18_test",
+          "channel": 1,
+          "mode": "pulse",
+          "hold_seconds": 2,
+          "polarity_inverted": false
+        }
+      }
+    }
+  }
+}
