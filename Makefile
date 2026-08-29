@@ -1,11 +1,15 @@
-# MSYS2 mingw64 Makefile for relay-c (Windows cmd + Unix compatible)
+# MSYS2 mingw64 Makefile for relay-c
+# Intermediate artifacts -> $(OUTDIR)/build
+# Portable package     -> $(OUTDIR)/relay-c (+ .zip via build.sh)
 
 CC ?= gcc
-MINGW ?= C:/msys64/mingw64
+PYTHON ?= tools/run_python.sh
 PKG_CONFIG ?= pkg-config
+MINGW ?= C:/msys64/mingw64
 
 OUTDIR ?= output
 BUILDDIR := $(OUTDIR)/build
+DISTDIR := $(OUTDIR)/relay-c
 
 CFLAGS_COMMON := -Wall -Wno-unused-parameter -D_WIN32_WINNT=0x0601 \
 	-fstack-protector-strong -Iinclude -Ithird_party -I$(MINGW)/include
@@ -30,35 +34,25 @@ OBJ := $(addprefix $(BUILDDIR)/,$(SRC:.c=.o))
 APP := $(BUILDDIR)/relay-c.exe
 TEST := $(BUILDDIR)/test_relay.exe
 
-.PHONY: all test clean dirs
+RUNTIME_DLLS := libcjson-1.dll libwinpthread-1.dll
 
-ifeq ($(OS),Windows_NT)
-SHELL := cmd
-MKDIR = if not exist "$(subst /,\,$(1))" mkdir "$(subst /,\,$(1))"
-else
-MKDIR = mkdir -p "$(1)"
-endif
+.PHONY: all test clean package dirs version
 
-all: dirs $(APP)
+all: dirs version $(APP) package
 
 dirs:
-ifeq ($(OS),Windows_NT)
-	@if not exist "$(subst /,\,$(BUILDDIR)\src)" mkdir "$(subst /,\,$(BUILDDIR)\src)"
-	@if not exist "$(subst /,\,$(BUILDDIR)\third_party)" mkdir "$(subst /,\,$(BUILDDIR)\third_party)"
-	@if not exist "$(subst /,\,$(OUTDIR))" mkdir "$(subst /,\,$(OUTDIR))"
-else
-	@mkdir -p $(BUILDDIR)/src $(BUILDDIR)/third_party $(OUTDIR)
-endif
+	@mkdir -p $(BUILDDIR)/src $(BUILDDIR)/third_party $(BUILDDIR)/tests $(DISTDIR) $(OUTDIR)
+
+version:
+	$(PYTHON) tools/gen_version.py -o include/version_gen.h
 
 $(APP): $(OBJ)
 	$(CC) -o $@ $^ $(LIBS)
 
+$(BUILDDIR)/src/main.o: include/version_gen.h
+
 $(BUILDDIR)/%.o: %.c
-ifeq ($(OS),Windows_NT)
-	@if not exist "$(subst /,\,$(dir $@))" mkdir "$(subst /,\,$(dir $@))"
-else
 	@mkdir -p $(dir $@)
-endif
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 TEST_SRC := tests/test_relay.c src/util.c src/action.c src/protocol.c src/serial.c \
@@ -69,15 +63,27 @@ $(TEST): $(TEST_OBJ) | dirs
 	$(CC) -o $@ $(TEST_OBJ) $(LIBS)
 
 test: $(TEST)
-ifeq ($(OS),Windows_NT)
-	@$(TEST)
-else
-	@./$(TEST)
-endif
+	$(TEST)
+
+# Portable folder: exe + DLLs + examples. Safe to copy anywhere on Windows.
+package: $(APP) | dirs
+	@echo "Packaging $(DISTDIR) ..."
+	rm -rf "$(DISTDIR)"
+	mkdir -p "$(DISTDIR)"
+	cp -f "$(APP)" "$(DISTDIR)/relay-c.exe"
+	@for d in $(RUNTIME_DLLS); do \
+		if [ ! -f "$(MINGW)/bin/$$d" ]; then echo "ERROR: missing $(MINGW)/bin/$$d"; exit 1; fi; \
+		cp -f "$(MINGW)/bin/$$d" "$(DISTDIR)/$$d"; \
+		echo "  dll $$d"; \
+	done
+	cp -f boards.json.example "$(DISTDIR)/boards.json.example"
+	cp -f tools/dist_README.txt "$(DISTDIR)/README.txt"
+	tools/run_python.sh tools/dist_copy_docs.py "$(DISTDIR)"
+	cp -f tools/dist_run.bat "$(DISTDIR)/run.bat"
+	-cp -f $(OUTDIR)/VERSION.txt "$(DISTDIR)/VERSION.txt" 2>/dev/null || true
+	@echo "OK: $(DISTDIR)"
 
 clean:
-ifeq ($(OS),Windows_NT)
-	@if exist "$(subst /,\,$(OUTDIR))" rmdir /s /q "$(subst /,\,$(OUTDIR))"
-else
-	@rm -rf $(OUTDIR)
-endif
+	-rm -rf $(OUTDIR)
+	-rm -f src/*.o third_party/mongoose.o relay-c.exe test_*.exe
+	-rm -f libcjson-1.dll libwinpthread-1.dll

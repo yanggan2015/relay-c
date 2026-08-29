@@ -9,10 +9,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include <signal.h>
 #endif
+
+#define APP_NAME "relay-c"
 
 static volatile int g_running = 1;
 
@@ -21,9 +24,63 @@ static void on_signal(int sig) {
     g_running = 0;
 }
 
-static void print_usage(const char *prog) {
-    fprintf(stderr, "Usage: %s [-c boards.json] [-p port] [-n] [-h]\n", prog);
-    fprintf(stderr, "  relay-c v%s - relay/board control server\n", RELAY_VERSION);
+static int license_expired(void) {
+    time_t now = time(NULL);
+    if (now == (time_t)-1) return 0;
+    if (APP_BUILD_EPOCH <= 0) return 0; /* dev fallback without stamp */
+    return (long long)now > (long long)APP_EXPIRE_EPOCH;
+}
+
+static void print_expired_message(FILE *out) {
+    fprintf(out, "========================================\n");
+    fprintf(out, " This software build has expired.\n");
+    fprintf(out, "========================================\n");
+    fprintf(out, "  version     : %s\n", APP_VERSION_STRING);
+    fprintf(out, "  built (UTC) : %s\n", APP_BUILD_TIME_UTC);
+    fprintf(out, "  expires     : %s  (%d days from build)\n", APP_EXPIRE_TIME_UTC, APP_EXPIRE_DAYS);
+    fprintf(out, "\n");
+    fprintf(out, "Please download a new release:\n");
+    fprintf(out, "  %s\n", APP_RELEASES_URL);
+    fprintf(out, "Or contact: %s\n", APP_CONTACT_EMAIL);
+    fprintf(out, "========================================\n");
+}
+
+static int ensure_not_expired(void) {
+    if (!license_expired()) return 0;
+    print_expired_message(stderr);
+    return 1;
+}
+
+static void print_usage(FILE *out) {
+    fprintf(out, "%s %s - relay/board control server\n\n", APP_NAME, APP_VERSION_STRING);
+    fprintf(out, "Usage:\n");
+    fprintf(out, "  %s.exe [-c boards.json] [-p port] [-n] [-h]\n", APP_NAME);
+    fprintf(out, "  %s.exe help\n", APP_NAME);
+    fprintf(out, "  %s.exe version\n\n", APP_NAME);
+    fprintf(out, "Options:\n");
+    fprintf(out, "  -c PATH             Config file (default: boards.json)\n");
+    fprintf(out, "  -p PORT             HTTP port (default: 18053)\n");
+    fprintf(out, "  -n, --dry-run       Simulate without opening serial ports\n");
+    fprintf(out, "  -v, --version       Print version and exit\n");
+    fprintf(out, "  -h, --help          Show this help\n\n");
+    fprintf(out, "Browser: http://127.0.0.1:18053/\n");
+    fprintf(out, "License: each build is valid for %d days from compile time.\n", APP_EXPIRE_DAYS);
+    fprintf(out, "New builds: %s\n", APP_RELEASES_URL);
+    fprintf(out, "Contact: %s\n", APP_CONTACT_EMAIL);
+}
+
+static void print_version(void) {
+    printf("%s %s\n", APP_NAME, APP_VERSION_STRING);
+    printf("build_utc=%s\n", APP_BUILD_TIME_UTC);
+    printf("expire_utc=%s\n", APP_EXPIRE_TIME_UTC);
+    printf("expire_days=%d\n", APP_EXPIRE_DAYS);
+    printf("releases=%s\n", APP_RELEASES_URL);
+    printf("contact=%s\n", APP_CONTACT_EMAIL);
+    if (license_expired()) {
+        printf("status=EXPIRED\n");
+    } else {
+        printf("status=ok\n");
+    }
 }
 
 int main(int argc, char **argv) {
@@ -37,6 +94,20 @@ int main(int argc, char **argv) {
     char verr[256];
     int i;
 
+    /* Subcommands allowed even when expired */
+    if (argc >= 2) {
+        if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-h") == 0 ||
+            strcmp(argv[1], "--help") == 0) {
+            print_usage(stdout);
+            return 0;
+        }
+        if (strcmp(argv[1], "version") == 0 || strcmp(argv[1], "-v") == 0 ||
+            strcmp(argv[1], "--version") == 0) {
+            print_version();
+            return license_expired() ? 2 : 0;
+        }
+    }
+
     for (i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-c") == 0 && i + 1 < argc) {
             config_path = argv[++i];
@@ -46,10 +117,15 @@ int main(int argc, char **argv) {
             dry_run = 1;
             relay_executor_set_dry_run(1);
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            print_usage(argv[0]);
+            print_usage(stdout);
             return 0;
+        } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
+            print_version();
+            return license_expired() ? 2 : 0;
         }
     }
+
+    if (ensure_not_expired() != 0) return 2;
 
 #ifdef _WIN32
     signal(SIGINT, on_signal);
@@ -77,6 +153,7 @@ int main(int argc, char **argv) {
 
     relay_log("[relay-c] v%s platform=%s relays=%d boards=%d port=%d dry_run=%d",
               RELAY_VERSION, cfg.platform, cfg.n_relays, cfg.n_boards, port, dry_run);
+    relay_log("[relay-c] built %s, expires %s", APP_BUILD_TIME_UTC, APP_EXPIRE_TIME_UTC);
 
     srv = relay_http_create(&cfg, &cache);
     if (!srv) {

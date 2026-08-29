@@ -108,11 +108,11 @@ static int test_service_dry(void) {
         return fail(err);
 
     if (relay_service_run_board_action(svc, &cfg.boards[0], &cfg, cfg.platform,
-                                       "fan_on", &cache, err, sizeof(err)) != 0)
+                                       "power_led", &cache, err, sizeof(err)) != 0)
         return fail(err);
 
     if (relay_service_run_board_action(svc, &cfg.boards[0], &cfg, cfg.platform,
-                                       "short_pulse", &cache, err, sizeof(err)) != 0)
+                                       "custom_pulse", &cache, err, sizeof(err)) != 0)
         return fail(err);
 
     relay_service_free(svc);

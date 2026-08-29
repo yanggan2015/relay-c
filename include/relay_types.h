@@ -17,7 +17,18 @@ extern "C" {
 #define RELAY_MAX_BOARDS         32
 #define RELAY_MAX_CUSTOM_ACTIONS 8
 #define RELAY_MAX_PATH           512
-#define RELAY_VERSION            "1.1.0"
+
+#if defined(__has_include)
+#  if __has_include("version_gen.h")
+#    include "version_gen.h"
+#  else
+#    include "version_fallback.h"
+#  endif
+#else
+#  include "version_fallback.h"
+#endif
+
+#define RELAY_VERSION            APP_VERSION_STRING
 
 /* relay 启动时通道初始化：-1=不操作，0=全 OFF，1=全 ON */
 #define RELAY_STARTUP_SKIP       (-1)

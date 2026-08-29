@@ -1,5 +1,57 @@
 # relay-c 设计说明
 
+## 0. 开源 / 发布策略（重要）
+
+### 0.1 原则
+
+| 内容 | 策略 | 说明 |
+|------|------|------|
+| 源代码 | **闭源 / 私有仓库** | 仅维护者可见；不进 Release 附件 |
+| Windows 可执行包 | **公开发布** | zip 内含 exe + 运行时 DLL + 示例配置 |
+| Linux 可执行包 | **预留，稍后开放** | 命名与流程与 Windows 对称 |
+| Release 中的 “Source code” | **不得含业务源码** | 公开发布仓仅放 README，无工程源码 |
+
+> GitHub 限制：若 Release 建在**私有**仓库上，外人无法下载。  
+> 因此必须采用 **「私有源码仓 + 公开发布仓」** 双仓模型（与 ssh-bridge-c 相同）。
+
+### 0.2 双仓模型
+
+```text
+yanggan2015/relay-c              ← 私有：完整源码、CI/构建脚本
+        │
+        │  ./build.sh release
+        │  （只上传可执行 zip，不上传源码）
+        ▼
+yanggan2015/relay-c-releases     ← 公开：仅 README + GitHub Releases 附件
+```
+
+| 仓库 | 可见性 | 用途 |
+|------|--------|------|
+| `relay-c` | **Private** | 源码开发、`build.sh`、内部文档 |
+| `relay-c-releases` | **Public** | 对外下载 Windows（及未来 Linux）二进制 |
+
+用户下载入口：
+
+- https://github.com/yanggan2015/relay-c-releases/releases
+- 过期联系：`yanggan2015@foxmail.com`
+
+### 0.3 版本号与有效期
+
+- 格式：`YYYYMMDD-HHMMSS`（UTC），由 `tools/gen_version.py` 生成
+- 每个构建自编译起 **90 天**有效；`relay-c.exe version` 可查看
+- Release 资产名：`relay-c-windows-<VERSION>.zip`
+
+### 0.4 构建命令
+
+```bash
+./build.sh              # 本地构建 + windows zip（不上传）
+./build.sh release      # 构建 + 上传到公开 releases 仓
+```
+
+Windows：`build.bat` / `build.bat release`
+
+---
+
 ## 1. 设计目标
 
 在 Python 版 `relay` 项目基础上，用 C 语言实现同等能力的继电器控制服务，并做以下增强：
@@ -226,33 +278,19 @@ relay-c/
 ├── DESIGN.md
 ├── README.md
 ├── Makefile
-├── build.bat
-├── boards.json
+├── build.bat / build.sh
+├── install_deps.bat
 ├── boards.json.example
 ├── include/
-│   ├── relay_types.h
-│   ├── relay_protocol.h
-│   ├── relay_serial.h
-│   ├── relay_service.h
-│   ├── relay_config.h
-│   ├── relay_http.h
-│   └── util.h
 ├── src/
-│   ├── util.c
-│   ├── protocol.c
-│   ├── serial.c
-│   ├── config.c
-│   ├── service.c
-│   ├── http_server.c
-│   └── main.c
 ├── third_party/
-│   ├── mongoose.c
-│   └── mongoose.h
-└── tests/
-    └── test_relay.c
+├── tests/
+├── tools/                  # gen_version / dist 打包文档
+└── output/                 # build/ + relay-c/ 便携目录 + zip
 ```
 
 ## 9. 测试策略
 
 - 单元测试 `test_relay.c`：InMemory 串口模拟，覆盖 reset/upgrade 序列、enable 校验、配置 CRUD
 - 硬件测试：COM18 连接实际继电器模块
+- 发版前：`./build.sh release`，确认公开仓可下载且附件无源码

@@ -1,88 +1,44 @@
 @echo off
-
 setlocal EnableExtensions
-
 cd /d "%~dp0"
 
-
-
 set "MINGW=C:\msys64\mingw64"
-
 set "MSYS=C:\msys64"
-
-set "PATH=%MINGW%\bin;%PATH%"
-
-set "APP=output\build\relay-c.exe"
-
-
-
-echo ========================================
-
-echo  relay-c build
+set "PATH=%MINGW%\bin;%MSYS%\usr\bin;%PATH%"
+REM Non-login MSYS bash often sets HOME=C:Users... (broken). Point it at the
+REM real Windows profile so git can read %%USERPROFILE%%\.gitconfig for tags.
+if defined USERPROFILE set "HOME=%USERPROFILE%"
+set "MODE=%~1"
+if "%MODE%"=="" set "MODE=build"
 
 echo ========================================
-
-
-
-if not exist "%MINGW%\bin\gcc.exe" (
-
-  echo [ERROR] gcc not found: %MINGW%\bin\gcc.exe
-
-  echo Install MSYS2: pacman -S mingw-w64-x86_64-gcc
-
-  exit /b 1
-
-)
-
-
-
-if exist "%MINGW%\bin\mingw32-make.exe" (
-
-  set "MAKE=%MINGW%\bin\mingw32-make.exe"
-
-) else if exist "%MSYS%\usr\bin\make.exe" (
-
-  set "MAKE=%MSYS%\usr\bin\make.exe"
-
-) else (
-
-  echo [ERROR] make / mingw32-make not found
-
-  echo Install MSYS2: pacman -S mingw-w64-x86_64-make
-
-  exit /b 1
-
-)
-
-
-
-taskkill /IM relay-c.exe /F >nul 2>&1
-
-if not exist "output\build\src" mkdir "output\build\src"
-if not exist "output\build\third_party" mkdir "output\build\third_party"
-if not exist "output" mkdir "output"
-
-"%MAKE%" all
-
-if errorlevel 1 (
-
-  echo.
-
-  echo [HINT] If Permission denied, stop relay-c.exe and retry:
-
-  echo        taskkill /IM relay-c.exe /F
-
-  echo [FAIL] make failed
-
-  exit /b 1
-
-)
-
-
-
+echo  relay-c - %MODE%
+echo  (delegates to build.sh -^> output/)
+echo ========================================
 echo.
 
-echo OK: %APP%
+if not exist "%MINGW%\bin\gcc.exe" (
+  echo [ERROR] 未找到 %MINGW%\bin\gcc.exe
+  echo 请先安装 MSYS2，并执行: install_deps.bat
+  exit /b 1
+)
 
+if not exist "%MSYS%\usr\bin\bash.exe" (
+  echo [ERROR] 未找到 bash，请安装 MSYS2
+  exit /b 1
+)
+
+REM Use bash -c (not -lc): login shells cd to $HOME and break the working dir.
+"%MSYS%\usr\bin\bash.exe" -c "./build.sh %MODE%"
+if errorlevel 1 (
+  echo [FAIL] build.sh failed
+  exit /b 1
+)
+
+echo.
+echo 产物:
+echo   output\build\
+echo   output\relay-c\
+echo   output\relay-c-^<version^>.zip
+if /I "%MODE%"=="release" echo   GitHub Release uploaded (if gh logged in)
 exit /b 0
-

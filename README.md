@@ -2,21 +2,44 @@
 
 C 语言版继电器控制服务。继电器定义与板级行为分离，支持 IO 取反、固定 reset/upgrade 时序、自定义标签动作。
 
-## 快速开始
+> **发布策略**：源码仓库私有；Windows 可执行包公开发布到 [`relay-c-releases`](https://github.com/yanggan2015/relay-c-releases/releases)。详见 [DESIGN.md](DESIGN.md)。
+
+## 快速开始（开发机）
 
 ```bat
+install_deps.bat
 build.bat
-copy boards.json.example boards.json   REM 首次使用
+copy boards.json.example boards.json
 run.bat
 ```
 
-浏览器打开：**http://127.0.0.1:18053/**（控制页 `/` · 配置编辑 `/config` · API 文档 `/docs`：Markdown 预览 + 完整 curl，自动使用局域网 IP）
+浏览器打开：**http://127.0.0.1:18053/**（控制页 `/` · 配置编辑 `/config` · API 文档 `/docs`）
 
 无硬件时用模拟模式：
 
 ```bat
-output\build\relay-c.exe -c boards.json -n
+output\relay-c\relay-c.exe -c boards.json -n
 ```
+
+## 构建与发布
+
+```bat
+build.bat              REM 编译 + 测试 + 生成 output\relay-c-windows-<VERSION>.zip
+build.bat release      REM 同上，并上传到公开仓 yanggan2015/relay-c-releases
+```
+
+等价 bash：
+
+```bash
+./build.sh
+./build.sh release
+SKIP_UPLOAD=1 ./build.sh release
+SKIP_TESTS=1 ./build.sh
+```
+
+便携包内容（无源码）：`relay-c.exe` + 运行时 DLL + `boards.json.example` + `使用说明.txt` + `run.bat`。
+
+每个构建自编译起 **90 天**有效；过期后请下载新 Release。
 
 ## 配置文件 boards.json
 
