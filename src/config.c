@@ -168,6 +168,7 @@ int relay_config_load(AppConfig *out, const char *path) {
     cJSON *root, *relays, *boards, *server, *it;
     if (!out || !path) return -1;
     memset(out, 0, sizeof(*out));
+    out->discoverable = 1;
     relay_str_copy(out->config_path, sizeof(out->config_path), path);
     relay_str_copy(out->platform, sizeof(out->platform), relay_detect_platform());
 
@@ -178,9 +179,14 @@ int relay_config_load(AppConfig *out, const char *path) {
     if (!root) return -1;
 
     server = cJSON_GetObjectItemCaseSensitive(root, "server");
-    if (cJSON_IsObject(server) && cJSON_GetObjectItemCaseSensitive(server, "port")) {
-        out->server_port = json_int(server, "port", 18053);
-        out->server_port_set = 1;
+    if (cJSON_IsObject(server)) {
+        if (cJSON_GetObjectItemCaseSensitive(server, "port")) {
+            out->server_port = json_int(server, "port", 18053);
+            out->server_port_set = 1;
+        }
+        out->discoverable = json_bool(server, "discoverable", 1);
+        relay_str_copy(out->display_name, sizeof(out->display_name),
+                       json_str(server, "display_name"));
     }
 
     relays = cJSON_GetObjectItemCaseSensitive(root, "relays");
@@ -285,6 +291,9 @@ int relay_config_save(const AppConfig *cfg) {
     server = cJSON_CreateObject();
     if (cfg->server_port_set)
         cJSON_AddNumberToObject(server, "port", cfg->server_port);
+    cJSON_AddBoolToObject(server, "discoverable", cfg->discoverable ? 1 : 0);
+    if (cfg->display_name[0])
+        cJSON_AddStringToObject(server, "display_name", cfg->display_name);
     cJSON_AddItemToObject(root, "server", server);
 
     relays = cJSON_CreateObject();

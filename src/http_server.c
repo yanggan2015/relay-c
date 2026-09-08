@@ -5,6 +5,7 @@
 #include "relay_action.h"
 #include "http_api.h"
 #include "http_pages.h"
+#include "audit.h"
 #include "util.h"
 #include "mongoose.h"
 
@@ -492,6 +493,53 @@ static void dispatch_api(struct mg_connection *c, RelayHttpServer *srv, struct m
     err_json(c, 404, "not found");
 }
 
+static void peer_ip(struct mg_connection *c, char *buf, size_t cap) {
+    if (!buf || cap == 0) return;
+    buf[0] = '\0';
+    if (!c) return;
+    mg_snprintf(buf, cap, "%M", mg_print_ip, &c->rem);
+}
+
+static int path_needs_audit(const char *path, size_t len) {
+    char tmp[512];
+    const char *p;
+    if (!path || len == 0 || len >= sizeof(tmp)) return 0;
+    memcpy(tmp, path, len);
+    tmp[len] = '\0';
+    if (strstr(tmp, "/action")) return 1;
+    if (strstr(tmp, "/raw")) return 1;
+    if (strstr(tmp, "/config/")) return 1;
+    /* .../relay control (not /api/relays list) */
+    p = tmp;
+    while ((p = strstr(p, "/relay")) != NULL) {
+        char next = p[6];
+        if (next == '\0' || next == '/') return 1;
+        p += 6;
+    }
+    return 0;
+}
+
+static void maybe_audit(struct mg_connection *c, struct mg_http_message *hm, int status) {
+    char ip[64];
+    char path[512];
+    char qs[1024];
+    char method[16];
+    size_t plen, qlen, mlen;
+    if (!hm) return;
+    plen = hm->uri.len < sizeof(path) - 1 ? hm->uri.len : sizeof(path) - 1;
+    memcpy(path, hm->uri.buf, plen);
+    path[plen] = '\0';
+    if (!path_needs_audit(path, plen)) return;
+    peer_ip(c, ip, sizeof(ip));
+    qlen = hm->query.len < sizeof(qs) - 1 ? hm->query.len : sizeof(qs) - 1;
+    memcpy(qs, hm->query.buf ? hm->query.buf : "", qlen);
+    qs[qlen] = '\0';
+    mlen = hm->method.len < sizeof(method) - 1 ? hm->method.len : sizeof(method) - 1;
+    memcpy(method, hm->method.buf, mlen);
+    method[mlen] = '\0';
+    relay_audit(ip, method, path, qs, status, "http");
+}
+
 static void fn(struct mg_connection *c, int ev, void *ev_data) {
     RelayHttpServer *srv = (RelayHttpServer *)c->fn_data;
     if (ev == MG_EV_HTTP_MSG) {
@@ -508,7 +556,12 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             relay_http_page_config(c, srv);
             return;
         }
+        if (uri_eq(hm->uri, "/health")) {
+            relay_http_api_handle_config(c, srv, hm);
+            return;
+        }
         if (hm->uri.len >= 5 && memcmp(hm->uri.buf, "/api/", 5) == 0) {
+            maybe_audit(c, hm, 0);
             dispatch_api(c, srv, hm);
             return;
         }

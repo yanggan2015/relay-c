@@ -1,6 +1,8 @@
 {
   "server": {
-    "port": 18053
+    "port": 18053,
+    "discoverable": true,
+    "display_name": "relay-lab"
   },
   "relays": {
     "com18_test": {

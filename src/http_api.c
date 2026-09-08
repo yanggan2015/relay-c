@@ -218,6 +218,58 @@ static void api_serial_ports(struct mg_connection *c) {
     free(s);
 }
 
+static void api_help(struct mg_connection *c, RelayHttpServer *srv) {
+    cJSON *o = cJSON_CreateObject();
+    cJSON *arr = cJSON_CreateArray();
+    char base[128];
+    char *s;
+    snprintf(base, sizeof(base), "http://127.0.0.1:%d", srv->port);
+    cJSON_AddStringToObject(o, "tool", "relay");
+    cJSON_AddStringToObject(o, "version", RELAY_VERSION);
+    cJSON_AddStringToObject(o, "base", base);
+#define ADD_CMD(name, path, demo) do { \
+    cJSON *it = cJSON_CreateObject(); \
+    cJSON_AddStringToObject(it, "name", name); \
+    cJSON_AddStringToObject(it, "path", path); \
+    cJSON_AddStringToObject(it, "example", demo); \
+    cJSON_AddItemToArray(arr, it); \
+} while (0)
+    ADD_CMD("health", "/api/health or /health",
+            "curl \"http://127.0.0.1:PORT/api/health\"");
+    ADD_CMD("help", "/api/help",
+            "curl \"http://127.0.0.1:PORT/api/help\"");
+    ADD_CMD("list relays", "/api/relays",
+            "curl \"http://127.0.0.1:PORT/api/relays\"");
+    ADD_CMD("list boards", "/api/boards",
+            "curl \"http://127.0.0.1:PORT/api/boards\"");
+    ADD_CMD("boards support", "/api/boards/support",
+            "curl \"http://127.0.0.1:PORT/api/boards/support\"");
+    ADD_CMD("relay on/off", "/api/relays/{name}/relay?channel=&state=",
+            "curl \"http://127.0.0.1:PORT/api/relays/NAME/relay?channel=1&state=1\"");
+    ADD_CMD("relay state", "/api/relays/{name}/state?channel=",
+            "curl \"http://127.0.0.1:PORT/api/relays/NAME/state\"");
+    ADD_CMD("relay raw", "/api/relays/{name}/raw?data=&format=",
+            "curl \"http://127.0.0.1:PORT/api/relays/NAME/raw?data=A0%2001%2001%20A2\"");
+    ADD_CMD("board action", "/api/boards/{name}/action?action=",
+            "curl \"http://127.0.0.1:PORT/api/boards/NAME/action?action=reset\"");
+    ADD_CMD("board state", "/api/boards/{name}/state",
+            "curl \"http://127.0.0.1:PORT/api/boards/NAME/state\"");
+    ADD_CMD("serial ports", "/api/serial/ports",
+            "curl \"http://127.0.0.1:PORT/api/serial/ports\"");
+    ADD_CMD("config reload", "/api/config/reload",
+            "curl \"http://127.0.0.1:PORT/api/config/reload\"");
+    ADD_CMD("config relays", "/api/config/relays",
+            "curl \"http://127.0.0.1:PORT/api/config/relays\"");
+    ADD_CMD("config boards", "/api/config/boards",
+            "curl \"http://127.0.0.1:PORT/api/config/boards\"");
+#undef ADD_CMD
+    cJSON_AddItemToObject(o, "commands", arr);
+    s = cJSON_PrintUnformatted(o);
+    cJSON_Delete(o);
+    json_reply(c, 200, s);
+    free(s);
+}
+
 static int handle_config_routes(struct mg_connection *c, RelayHttpServer *srv,
                                 struct mg_http_message *hm) {
     char name[RELAY_MAX_NAME];
@@ -225,8 +277,12 @@ static int handle_config_routes(struct mg_connection *c, RelayHttpServer *srv,
     char err[256];
     cJSON *fields;
 
-    if (uri_eq(hm->uri, "/api/health")) {
+    if (uri_eq(hm->uri, "/api/health") || uri_eq(hm->uri, "/health")) {
         api_health(c, srv);
+        return 1;
+    }
+    if (uri_eq(hm->uri, "/api/help")) {
+        api_help(c, srv);
         return 1;
     }
     if (uri_eq(hm->uri, "/api/serial/ports")) {

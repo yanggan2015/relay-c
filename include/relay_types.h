@@ -110,6 +110,8 @@ typedef struct {
 typedef struct {
     int          server_port;
     int          server_port_set;
+    int          discoverable; /* default 1 */
+    char         display_name[128];
     RelayConfig  relays[RELAY_MAX_RELAYS];
     int          n_relays;
     BoardConfig  boards[RELAY_MAX_BOARDS];
