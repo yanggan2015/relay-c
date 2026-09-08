@@ -114,6 +114,7 @@ static char *build_reply_json(EadkDiscovery *d, const char *config_path, int htt
     cJSON_AddStringToObject(root, "cmd", "a");
     cJSON_AddStringToObject(root, "magic", EADK_DISCOVERY_MAGIC);
     cJSON_AddStringToObject(root, "tool", d->tool[0] ? d->tool : "relay");
+    cJSON_AddStringToObject(root, "product", "EADK Relay");
     cJSON_AddStringToObject(root, "tool_version", "1");
     cJSON_AddNumberToObject(root, "http_port", http_port);
     cJSON_AddStringToObject(root, "host", host);

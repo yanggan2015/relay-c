@@ -146,7 +146,10 @@ static cJSON *query_to_board_json(struct mg_http_message *hm) {
 
 static void api_health(struct mg_connection *c, RelayHttpServer *srv) {
     cJSON *o = cJSON_CreateObject();
+    cJSON_AddBoolToObject(o, "ok", 1);
     cJSON_AddStringToObject(o, "status", "ok");
+    cJSON_AddStringToObject(o, "tool", "relay");
+    cJSON_AddStringToObject(o, "product", "EADK Relay");
     cJSON_AddStringToObject(o, "version", RELAY_VERSION);
     cJSON_AddStringToObject(o, "platform", srv->cfg->platform);
     cJSON_AddNumberToObject(o, "relays", srv->cfg->n_relays);
@@ -225,6 +228,7 @@ static void api_help(struct mg_connection *c, RelayHttpServer *srv) {
     char *s;
     snprintf(base, sizeof(base), "http://127.0.0.1:%d", srv->port);
     cJSON_AddStringToObject(o, "tool", "relay");
+    cJSON_AddStringToObject(o, "product", "EADK Relay");
     cJSON_AddStringToObject(o, "version", RELAY_VERSION);
     cJSON_AddStringToObject(o, "base", base);
 #define ADD_CMD(name, path, demo) do { \

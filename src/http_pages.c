@@ -104,7 +104,7 @@ const char *relay_page_nav(const char *active) {
         "<header class=\"hero\">"
         "<div class=\"hero-top\"><div>"
         "<p class=\"eyebrow\">EADK · Tool</p>"
-        "<h1>relay-c</h1>"
+        "<h1>EADK Relay</h1>"
         "<p>继电器控制平台 v%s · 浏览器或桌面壳操作</p>"
         "</div></div>"
         "<nav class=\"nav\">"
