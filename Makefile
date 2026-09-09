@@ -71,6 +71,7 @@ $(TEST): $(TEST_OBJ) | dirs
 	$(CC) -o $@ $(TEST_OBJ) $(LIBS)
 
 test: $(TEST)
+	@if [ ! -f boards.json ]; then cp -f boards.json.example boards.json; fi
 	$(TEST)
 
 ifeq ($(OS),Windows_NT)
@@ -83,6 +84,7 @@ endif
 	mkdir -p "$(DISTDIR)"
 	cp -f "$(APP)" "$(DISTDIR)/$(EXE_NAME)"
 	cp -f boards.json.example "$(DISTDIR)/boards.json.example"
+	cp -f relay_config.json.example "$(DISTDIR)/relay_config.json.example"
 	@if [ ! -f "$(DISTDIR)/boards.json" ]; then cp -f boards.json.example "$(DISTDIR)/boards.json"; fi
 	cp -f README.md "$(DISTDIR)/README.txt" 2>/dev/null || true
 ifeq ($(OS),Windows_NT)

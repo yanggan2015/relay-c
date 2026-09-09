@@ -27,10 +27,10 @@ static void print_usage(const char *prog) {
     fprintf(stderr,
             "relay-c v%s — relay/board control\n\n"
             "Usage:\n"
-            "  %s [-c boards.json] [-p port] [-n]     start server (default)\n"
+            "  %s [-c relay_config.json] [-p port] [-n]     start server (default)\n"
             "  %s help | -h\n"
             "  %s version | -v\n"
-            "  %s status [-c boards.json] [-p port]\n"
+            "  %s status [-c relay_config.json] [-p port]\n"
             "  %s call <path_and_query> [-c] [-p]\n"
             "  %s board-action <board> <action> [-c] [-p]\n"
             "  %s relay-set <relay> <channel> <0|1> [-c] [-p]\n\n"
@@ -52,6 +52,16 @@ static int parse_common_flags(int argc, char **argv, int start,
             fprintf(stderr, "unknown argument: %s\n", argv[i]);
             return -1;
         }
+    }
+    return 0;
+}
+
+static int resolve_cli_config(const char *cfg_arg, char *dst, size_t cap) {
+    if (relay_resolve_config_path(dst, cap, cfg_arg) != 0) {
+        fprintf(stderr, "error: config not found");
+        if (cfg_arg && cfg_arg[0]) fprintf(stderr, " (%s)", cfg_arg);
+        fprintf(stderr, "\n");
+        return -1;
     }
     return 0;
 }
@@ -113,7 +123,8 @@ static int run_serve(int argc, char **argv) {
     RelayHttpServer *srv;
     RelayService *service;
     EadkDiscovery *disc = NULL;
-    const char *config_path = "boards.json";
+    const char *cfg_arg = NULL;
+    char cfgpath[RELAY_MAX_PATH];
     int port = 18053;
     int dry_run = 0;
     char verr[256];
@@ -121,7 +132,7 @@ static int run_serve(int argc, char **argv) {
 
     for (i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-c") == 0 && i + 1 < argc) {
-            config_path = argv[++i];
+            cfg_arg = argv[++i];
         } else if (strcmp(argv[i], "-p") == 0 && i + 1 < argc) {
             port = atoi(argv[++i]);
         } else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--dry-run") == 0) {
@@ -153,9 +164,18 @@ static int run_serve(int argc, char **argv) {
             cache.state[i][ch] = -1;
     }
 
-    if (relay_config_load(&cfg, config_path) != 0) {
-        relay_log("[relay-c] warning: cannot load %s, starting with empty config", config_path);
-        relay_str_copy(cfg.config_path, sizeof(cfg.config_path), config_path);
+    if (relay_resolve_or_create_config_path(cfgpath, sizeof(cfgpath), cfg_arg) != 0) {
+        fprintf(stderr, "error: config not found");
+        if (cfg_arg && cfg_arg[0]) fprintf(stderr, " (%s)", cfg_arg);
+        fprintf(stderr, "\n");
+        relay_lock_shutdown();
+        return 1;
+    }
+    relay_log("[relay-c] using config: %s", cfgpath);
+
+    if (relay_config_load(&cfg, cfgpath) != 0) {
+        relay_log("[relay-c] warning: cannot load %s, starting with empty config", cfgpath);
+        relay_str_copy(cfg.config_path, sizeof(cfg.config_path), cfgpath);
         relay_str_copy(cfg.platform, sizeof(cfg.platform), relay_detect_platform());
     } else if (relay_config_validate_all(&cfg, verr, sizeof(verr)) != 0) {
         relay_log("[relay-c] config validation warning: %s", verr);
@@ -197,7 +217,8 @@ static int run_serve(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-    const char *config_path = "boards.json";
+    const char *cfg_arg = NULL;
+    char cfgpath[RELAY_MAX_PATH];
     int port_flag = 0;
     const char *cmd;
 
@@ -219,8 +240,9 @@ int main(int argc, char **argv) {
         return run_serve(argc, argv);
 
     if (strcmp(cmd, "status") == 0) {
-        if (parse_common_flags(argc, argv, 2, &config_path, &port_flag) != 0) return 1;
-        return cmd_status(config_path, port_flag);
+        if (parse_common_flags(argc, argv, 2, &cfg_arg, &port_flag) != 0) return 1;
+        if (resolve_cli_config(cfg_arg, cfgpath, sizeof(cfgpath)) != 0) return 1;
+        return cmd_status(cfgpath, port_flag);
     }
     if (strcmp(cmd, "call") == 0) {
         const char *path;
@@ -230,8 +252,9 @@ int main(int argc, char **argv) {
             return 1;
         }
         path = argv[2];
-        if (parse_common_flags(argc, argv, 3, &config_path, &port_flag) != 0) return 1;
-        port = resolve_port(config_path, port_flag);
+        if (parse_common_flags(argc, argv, 3, &cfg_arg, &port_flag) != 0) return 1;
+        if (resolve_cli_config(cfg_arg, cfgpath, sizeof(cfgpath)) != 0) return 1;
+        port = resolve_port(cfgpath, port_flag);
         return cli_print_http(port, path);
     }
     if (strcmp(cmd, "board-action") == 0) {
@@ -241,8 +264,9 @@ int main(int argc, char **argv) {
             fprintf(stderr, "usage: %s board-action <board> <action> [-c] [-p]\n", argv[0]);
             return 1;
         }
-        if (parse_common_flags(argc, argv, 4, &config_path, &port_flag) != 0) return 1;
-        port = resolve_port(config_path, port_flag);
+        if (parse_common_flags(argc, argv, 4, &cfg_arg, &port_flag) != 0) return 1;
+        if (resolve_cli_config(cfg_arg, cfgpath, sizeof(cfgpath)) != 0) return 1;
+        port = resolve_port(cfgpath, port_flag);
         snprintf(path, sizeof(path), "/api/boards/%s/action?action=%s", argv[2], argv[3]);
         return cli_print_http(port, path);
     }
@@ -253,8 +277,9 @@ int main(int argc, char **argv) {
             fprintf(stderr, "usage: %s relay-set <relay> <channel> <0|1> [-c] [-p]\n", argv[0]);
             return 1;
         }
-        if (parse_common_flags(argc, argv, 5, &config_path, &port_flag) != 0) return 1;
-        port = resolve_port(config_path, port_flag);
+        if (parse_common_flags(argc, argv, 5, &cfg_arg, &port_flag) != 0) return 1;
+        if (resolve_cli_config(cfg_arg, cfgpath, sizeof(cfgpath)) != 0) return 1;
+        port = resolve_port(cfgpath, port_flag);
         snprintf(path, sizeof(path), "/api/relays/%s/relay?channel=%s&state=%s",
                  argv[2], argv[3], argv[4]);
         return cli_print_http(port, path);

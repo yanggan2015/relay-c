@@ -24,6 +24,7 @@ constexpr int kHealthTimeoutMs = 30000;
 constexpr int kHealthIntervalMs = 200;
 constexpr const wchar_t *kChildExe = L"relay-c.exe";
 constexpr const wchar_t *kDefaultConfig = L"boards.json";
+constexpr const wchar_t *kKitConfig = L"relay_config.json";
 constexpr const char *kAppTitle = "relay-c";
 
 struct Options {
@@ -71,11 +72,21 @@ bool file_exists(const std::wstring &path) {
 
 std::wstring resolve_config_path(const Options &o, const std::wstring &dir) {
   if (!o.config_path.empty()) return o.config_path;
-  std::wstring boards = join_path(dir, kDefaultConfig);
-  if (file_exists(boards)) return boards;
-  std::wstring example = join_path(dir, L"boards.json.example");
-  if (file_exists(example) && CopyFileW(example.c_str(), boards.c_str(), FALSE)) return boards;
-  return boards;
+  const wchar_t *cands[] = {kKitConfig, kDefaultConfig};
+  for (auto name : cands) {
+    std::wstring p = join_path(dir, name);
+    if (file_exists(p)) return p;
+  }
+  const wchar_t *pairs[][2] = {
+      {L"relay_config.json.example", kKitConfig},
+      {L"boards.json.example", kDefaultConfig},
+  };
+  for (auto &pr : pairs) {
+    std::wstring ex = join_path(dir, pr[0]);
+    std::wstring dst = join_path(dir, pr[1]);
+    if (file_exists(ex) && CopyFileW(ex.c_str(), dst.c_str(), FALSE)) return dst;
+  }
+  return join_path(dir, kKitConfig);
 }
 
 Options parse_args(int argc, wchar_t **argv) {

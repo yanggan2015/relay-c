@@ -178,6 +178,19 @@ int relay_config_load(AppConfig *out, const char *path) {
     free(raw);
     if (!root) return -1;
 
+    {
+        cJSON *eadk = cJSON_GetObjectItemCaseSensitive(root, "eadk");
+        if (cJSON_IsObject(eadk)) {
+            cJSON *tool = cJSON_GetObjectItemCaseSensitive(eadk, "tool");
+            if (cJSON_IsString(tool) && tool->valuestring && tool->valuestring[0] &&
+                strcmp(tool->valuestring, "relay") != 0) {
+                relay_log("[config] reject %s: eadk.tool is not relay", path);
+                cJSON_Delete(root);
+                return -1;
+            }
+        }
+    }
+
     server = cJSON_GetObjectItemCaseSensitive(root, "server");
     if (cJSON_IsObject(server)) {
         if (cJSON_GetObjectItemCaseSensitive(server, "port")) {
@@ -340,6 +353,7 @@ int relay_config_save(const AppConfig *cfg) {
     }
     cJSON_AddItemToObject(root, "boards", boards);
 
+    relay_json_ensure_eadk_tool(root, "relay");
     text = cJSON_Print(root);
     cJSON_Delete(root);
     if (!text) return -1;

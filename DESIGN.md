@@ -187,8 +187,11 @@ Windows：`build.bat` / `build.bat release`
 
 ## 4. 配置文件规范
 
+**扁平套件**：首选文件名 `relay_config.json`（含 `"eadk":{"tool":"relay"}`）；查找顺序与遗留 `boards.json`/`config.json` 见套件根 `TOOL_STANDARD.md` §2.3。
+
 ```json
 {
+  "eadk": { "tool": "relay" },
   "server": { "port": 18053 },
   "relays": {
     "com18_test": {
