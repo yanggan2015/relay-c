@@ -43,7 +43,7 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
     pos += (size_t)snprintf(html + pos, cap - pos,
         "<section class=\"config-cols\">"
         "<div class=\"config-col\">"
-        "<h2>继电器</h2><p class=\"sub\">单通道开 / 关 / 查询</p>");
+        "<h2>继电器</h2>");
 
     for (i = 0; i < cfg->n_relays; ++i) {
         const RelayConfig *r = &cfg->relays[i];
@@ -66,11 +66,14 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
             pos += (size_t)snprintf(html + pos, cap - pos,
                 "<div class=\"ch-group\">"
                 "<span class=\"ch-label\">CH%d</span>"
-                "<button class=\"primary\" onclick=\"relaySet('%s',%d,true)\">开</button>"
-                "<button class=\"ghost\" onclick=\"relaySet('%s',%d,false)\">关</button>"
-                "<button class=\"ghost\" onclick=\"relayState('%s',%d)\">?</button>"
+                "<button class=\"primary\" onclick=\"relaySet('%s',%d,true)\"%s>开</button>"
+                "<button class=\"ghost\" onclick=\"relaySet('%s',%d,false)\"%s>关</button>"
+                "<button class=\"ghost\" onclick=\"relayState('%s',%d)\"%s>状态</button>"
                 "</div>",
-                ch, r->name, ch, r->name, ch, r->name, ch);
+                ch,
+                r->name, ch, r->enabled ? "" : " disabled",
+                r->name, ch, r->enabled ? "" : " disabled",
+                r->name, ch, r->enabled ? "" : " disabled");
         }
         pos += (size_t)snprintf(html + pos, cap - pos,
             "</div><div id=\"st-%s\" class=\"status\"></div></article>", r->name);
@@ -78,36 +81,45 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
 
     pos += (size_t)snprintf(html + pos, cap - pos,
         "</div><div class=\"config-col\">"
-        "<h2>板卡</h2><p class=\"sub\">复位 / 升级 / 自定义动作</p>");
+        "<h2>板子</h2>");
 
     for (i = 0; i < cfg->n_boards; ++i) {
         const BoardConfig *b = &cfg->boards[i];
         pos += (size_t)snprintf(html + pos, cap - pos,
             "<article class=\"card%s\">"
-            "<h3>%s</h3>"
+            "<h3>%s%s</h3>"
             "<div class=\"meta-row\">"
-            "<span class=\"chip\">复位 %s · ch%d</span>",
+            "<span class=\"chip\">电源 %s · CH%d · 保持 %.1fs%s</span>",
             b->enabled ? "" : " disabled", b->name,
-            b->reset.relay_name, b->reset.channel);
+            b->enabled ? "" : "（未使用）",
+            b->reset.relay_name, b->reset.channel, b->reset.hold_seconds,
+            b->reset.polarity_inverted ? " · 电平取反" : "");
         if (b->has_upgrade_mode && b->upgrade_mode.enabled)
             pos += (size_t)snprintf(html + pos, cap - pos,
                 "<span class=\"chip\">升级 %s · ch%d</span>",
                 b->upgrade_mode.relay_name, b->upgrade_mode.channel);
         pos += (size_t)snprintf(html + pos, cap - pos, "</div><div class=\"btn-row\">"
-            "<button class=\"primary\" onclick=\"boardAct('%s','reset')\">复位</button>",
-            b->name);
+            "<button class=\"ok\" onclick=\"boardAct('%s','on')\"%s>上电</button>"
+            "<button class=\"danger\" onclick=\"boardAct('%s','off')\"%s>下电</button>"
+            "<button class=\"primary\" onclick=\"boardAct('%s','reset')\"%s>重启</button>"
+            "<button class=\"ghost\" onclick=\"boardState('%s')\"%s>状态</button>",
+            b->name, b->enabled ? "" : " disabled",
+            b->name, b->enabled ? "" : " disabled",
+            b->name, b->enabled ? "" : " disabled",
+            b->name, b->enabled ? "" : " disabled");
         if (b->has_upgrade_mode && b->upgrade_mode.enabled)
             pos += (size_t)snprintf(html + pos, cap - pos,
-                "<button class=\"warn\" onclick=\"boardAct('%s','upgrade')\">升级</button>",
-                b->name);
+                "<button class=\"warn\" onclick=\"boardAct('%s','upgrade')\"%s>进入升级模式</button>",
+                b->name, b->enabled ? "" : " disabled");
         {
             int j;
             for (j = 0; j < b->n_custom_actions; ++j) {
                 const BoardCustomAction *a = &b->custom_actions[j];
                 if (!a->enabled) continue;
                 pos += (size_t)snprintf(html + pos, cap - pos,
-                    "<button class=\"ghost\" onclick=\"boardAct('%s','%s')\">%s</button>",
-                    b->name, a->name, a->label[0] ? a->label : a->name);
+                    "<button class=\"ghost\" onclick=\"boardAct('%s','%s')\"%s>%s</button>",
+                    b->name, a->name, b->enabled ? "" : " disabled",
+                    a->label[0] ? a->label : a->name);
             }
         }
         pos += (size_t)snprintf(html + pos, cap - pos,

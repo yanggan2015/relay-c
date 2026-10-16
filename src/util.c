@@ -376,7 +376,7 @@ int relay_home_dir(char *dst, size_t cap) {
 int relay_user_config_dir(char *dst, size_t cap) {
     char home[1024];
     if (relay_home_dir(home, sizeof(home)) != 0) return -1;
-    relay_path_join(dst, cap, home, ".relay-c");
+    relay_path_join(dst, cap, home, ".relay");
     return dst[0] ? 0 : -1;
 }
 

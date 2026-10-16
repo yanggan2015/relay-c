@@ -33,7 +33,7 @@ fi
 
 OUTDIR="${OUTDIR:-output}"
 BUILDDIR="$OUTDIR/build"
-DISTDIR="$OUTDIR/relay-c"
+DISTDIR="$OUTDIR/relay"
 MINGW="${MINGW:-/c/msys64/mingw64}"
 MSYS_USR="${MSYS_USR:-/c/msys64/usr}"
 PLATFORM="${PLATFORM:-windows}"
@@ -97,7 +97,7 @@ fi
 echo "Using Python via: $PY"
 
 # Avoid Permission denied when exe is still running
-taskkill //IM relay-c.exe //F >/dev/null 2>&1 || true
+taskkill //IM relay.exe //F >/dev/null 2>&1 || true
 
 echo "[1/5] clean output/ ..."
 $MAKE OUTDIR="$OUTDIR" MINGW="$MINGW" clean </dev/null
@@ -153,7 +153,7 @@ import os, zipfile, shutil
 outdir = os.environ["OUTDIR"]
 zip_name = os.environ["ZIP_NAME"]
 platform = os.environ["PLATFORM"]
-folder = os.path.join(outdir, "relay-c")
+folder = os.path.join(outdir, "relay")
 blocked = {"src", "include", "tests", "third_party", ".git"}
 zip_path = os.path.join(outdir, zip_name)
 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -178,7 +178,7 @@ fi
 
 echo
 echo "Embedded version check:"
-"$DISTDIR/relay-c.exe" version || true
+"$DISTDIR/relay.exe" version || true
 
 if [ "$MODE" = "release" ]; then
   echo

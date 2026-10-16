@@ -82,10 +82,12 @@ const char *relay_page_styles(void) {
         ".warn-box{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:12px;padding:11px 12px;margin-bottom:12px;line-height:1.5}"
         "@media(max-width:900px){.config-cols{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr 1fr}}"
         "@media(max-width:560px){.wrap{padding:12px 12px 28px}.hero{padding:16px}.form-grid{grid-template-columns:1fr}}"
-        /* iframe: legacy embedded vs EADK Manager kit (eadk_kit=1). */
-        "html.embedded .hero,html.kit .hero{display:none!important}"
+        "html.embedded .hero .hero-top,html.kit .hero .hero-top{display:none}"
+        "html.embedded .hero,html.kit .hero{padding:10px 12px;margin-bottom:10px;"
+        "box-shadow:none;border-radius:12px}"
+        "html.embedded .nav,html.kit .nav{margin-top:0}"
+        "html.embedded .foot,html.kit .foot{display:none}"
         "html.embedded .wrap,html.kit .wrap{max-width:none;padding:12px 12px 20px}"
-        "html.embedded .foot,html.kit .foot{display:none!important}"
         "html.embedded body,html.kit body{background:#eef3f6}"
         "html.kit,html.kit body{min-height:100%}";
 }
@@ -99,6 +101,10 @@ const char *relay_page_head(const char *title) {
         "<script>(function(){if(window.self===window.top)return;try{"
         "var kit=/(?:\\?|&)eadk_kit=1(?:&|$)/.test(location.search||'');"
         "document.documentElement.classList.add(kit?'kit':'embedded');"
+        "if(kit){document.addEventListener('DOMContentLoaded',function(){"
+        "document.querySelectorAll('.nav a').forEach(function(a){"
+        "if(!/(?:\\?|&)eadk_kit=1(?:&|$)/.test(a.search||''))"
+        "a.search=(a.search?a.search+'&':'?')+'eadk_kit=1';});});}"
         "}catch(e){}})();</script>"
         "</head><body><div class=\"wrap\">",
         title ? title : "relay", relay_page_styles());

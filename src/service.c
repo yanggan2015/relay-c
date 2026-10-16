@@ -333,6 +333,37 @@ int relay_service_run_board_action(RelayService *svc, const BoardConfig *board,
         return 0;
     }
 
+    if (relay_str_eq_ci(action, "on") || relay_str_eq_ci(action, "off")) {
+        int idle, pulse, target;
+        if (!board->reset.enabled) {
+            snprintf(err, errcap, "power binding is disabled");
+            relay_action_unlock();
+            return -1;
+        }
+        reset_relay = relay_find_by_name(cfg, board->reset.relay_name);
+        if (!reset_relay || !reset_relay->enabled) {
+            snprintf(err, errcap, "power relay not available");
+            relay_action_unlock();
+            return -1;
+        }
+        reset_port = resolve_port(reset_relay, platform, err, errcap);
+        if (!reset_port) {
+            relay_action_unlock();
+            return -1;
+        }
+        reset_idx = relay_find_index(cfg, reset_relay->name);
+        relay_action_idle_pulse(board->reset.polarity_inverted, &idle, &pulse);
+        target = relay_str_eq_ci(action, "on") ? idle : pulse;
+        if (set_logical(svc, reset_relay, reset_port, board->reset.channel, target,
+                        cache, reset_idx) != 0) {
+            snprintf(err, errcap, "power set failed");
+            relay_action_unlock();
+            return -1;
+        }
+        relay_action_unlock();
+        return 0;
+    }
+
     if (relay_str_eq_ci(action, "upgrade") || relay_str_eq_ci(action, "maskrom")) {
         if (!board->reset.enabled) {
             snprintf(err, errcap, "reset binding required for upgrade");

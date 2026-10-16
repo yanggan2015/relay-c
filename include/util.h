@@ -35,7 +35,7 @@ int relay_file_exists(const char *path);
 int relay_exe_dir(char *dst, size_t cap);
 int relay_cwd(char *dst, size_t cap);
 int relay_home_dir(char *dst, size_t cap);
-/* <home>/.relay-c */
+/* <home>/.relay */
 int relay_user_config_dir(char *dst, size_t cap);
 /*
  * EADK flat-kit config resolution (tool id = "relay"):
