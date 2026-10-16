@@ -1,5 +1,5 @@
 /*
- * Windows desktop shell: WebView2 + relay-c.exe.
+ * Windows desktop shell: WebView2 + relay.exe.
  * Shared webview headers: ../../ssh-bridge-c/third_party
  */
 #define WIN32_LEAN_AND_MEAN
@@ -19,13 +19,13 @@
 
 namespace {
 
-constexpr int kDefaultHttpPort = 18053;
+constexpr int kDefaultHttpPort = 18153;
 constexpr int kHealthTimeoutMs = 30000;
 constexpr int kHealthIntervalMs = 200;
-constexpr const wchar_t *kChildExe = L"relay-c.exe";
+constexpr const wchar_t *kChildExe = L"relay.exe";
 constexpr const wchar_t *kDefaultConfig = L"boards.json";
 constexpr const wchar_t *kKitConfig = L"relay_config.json";
-constexpr const char *kAppTitle = "relay-c";
+constexpr const char *kAppTitle = "relay";
 
 struct Options {
   std::wstring config_path;
@@ -189,7 +189,7 @@ bool tcp_get_ok(const char *host, int port, const char *path) {
 bool wait_health(int port, int timeout_ms) {
   int waited = 0;
   while (waited < timeout_ms) {
-    if (tcp_get_ok("127.0.0.1", port, "/health")) return true;
+    if (tcp_get_ok("127.0.0.1", port, "/relay/health")) return true;
     Sleep(kHealthIntervalMs);
     waited += kHealthIntervalMs;
   }
@@ -225,7 +225,7 @@ void close_child(ChildProc &c) {
 bool start_child(ChildProc &out, const std::wstring &dir, const Options &o, int http_port) {
   std::wstring exe = join_path(dir, kChildExe);
   if (GetFileAttributesW(exe.c_str()) == INVALID_FILE_ATTRIBUTES) {
-    show_msg(L"未找到同目录下的 relay-c.exe");
+    show_msg(L"未找到同目录下的 relay.exe");
     return false;
   }
 
@@ -251,7 +251,7 @@ bool start_child(ChildProc &out, const std::wstring &dir, const Options &o, int 
                                 CREATE_NO_WINDOW | CREATE_SUSPENDED, nullptr, dir.c_str(), &si,
                                 &pi);
   if (!created) {
-    show_msg(L"无法启动 relay-c.exe");
+    show_msg(L"无法启动 relay.exe");
     return false;
   }
 
@@ -286,11 +286,11 @@ void print_help_console() {
   freopen_s(&fp, "CONOUT$", "w", stderr);
   printf("%s (desktop)\n", kAppTitle);
   printf("Usage: relay_desktop.exe [options]\n");
-  printf("  -c, --config PATH   boards.json path (passed to relay-c)\n");
+  printf("  -c, --config PATH   boards.json path (passed to relay)\n");
   printf("  --http-port N       HTTP port (default from config or %d)\n", kDefaultHttpPort);
   printf("  --smoke-test        start child, wait /health, exit (no UI)\n");
   printf("  -h, --help          show this help\n");
-  printf("\nStarts relay-c.exe in the same folder and embeds the WebUI.\n");
+  printf("\nStarts relay.exe in the same folder and embeds the WebUI.\n");
 }
 
 } // namespace
@@ -328,7 +328,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     return 0;
   }
 
-  std::string url = "http://127.0.0.1:" + std::to_string(port) + "/";
+  std::string url = "http://127.0.0.1:" + std::to_string(port) + "/relay/";
   webview::webview w(false, nullptr);
   if (!w.window()) {
     show_msg(L"无法创建 WebView2 窗口。\n\n请安装 Microsoft Edge WebView2 Runtime:\n"

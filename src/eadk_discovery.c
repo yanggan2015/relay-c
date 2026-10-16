@@ -43,6 +43,8 @@ struct EadkDiscovery {
     pthread_mutex_t mu;
     char config_path[CFG_PATH];
     int http_port;
+    int advertise_http_port;
+    char base_path[64];
     char tool[32];
     char version[64];
 };
@@ -95,11 +97,31 @@ static int read_server_discover(const char *config_path, char *display_name, siz
     return disc;
 }
 
-static char *build_reply_json(EadkDiscovery *d, const char *config_path, int http_port) {
+static void path_join_base(char *out, size_t outsz, const char *base, const char *suffix) {
+    if (!out || outsz == 0) return;
+    if (!base || !base[0] || strcmp(base, "/") == 0) {
+        snprintf(out, outsz, "%s", suffix && suffix[0] ? suffix : "/");
+        return;
+    }
+    if (!suffix || !suffix[0]) {
+        snprintf(out, outsz, "%s/", base);
+        return;
+    }
+    if (suffix[0] == '/')
+        snprintf(out, outsz, "%s%s", base, suffix);
+    else
+        snprintf(out, outsz, "%s/%s", base, suffix);
+}
+
+static char *build_reply_json(EadkDiscovery *d, const char *config_path, int http_port,
+                              int advertise_http_port, const char *base_path) {
     char host[64];
     char display_name[128];
+    char open_p[96], docs_p[96], health_p[96], api_p[96];
     cJSON *root, *caps;
     char *json;
+    const char *bp = (base_path && base_path[0]) ? base_path : "/relay";
+    int adv = advertise_http_port > 0 ? advertise_http_port : http_port;
 
     if (!read_server_discover(config_path, display_name, sizeof(display_name)))
         return NULL;
@@ -107,6 +129,11 @@ static char *build_reply_json(EadkDiscovery *d, const char *config_path, int htt
     host[0] = '\0';
     if (relay_detect_lan_ip(host, sizeof(host)) != 0 || !host[0])
         relay_str_copy(host, sizeof(host), "127.0.0.1");
+
+    path_join_base(open_p, sizeof(open_p), bp, "/");
+    path_join_base(docs_p, sizeof(docs_p), bp, "/docs");
+    path_join_base(health_p, sizeof(health_p), bp, "/health");
+    path_join_base(api_p, sizeof(api_p), bp, "/api/help");
 
     root = cJSON_CreateObject();
     if (!root) return NULL;
@@ -116,14 +143,14 @@ static char *build_reply_json(EadkDiscovery *d, const char *config_path, int htt
     cJSON_AddStringToObject(root, "tool", d->tool[0] ? d->tool : "relay");
     cJSON_AddStringToObject(root, "product", "EADK Relay");
     cJSON_AddStringToObject(root, "tool_version", "1");
-    cJSON_AddNumberToObject(root, "http_port", http_port);
+    cJSON_AddNumberToObject(root, "http_port", adv);
     cJSON_AddStringToObject(root, "host", host);
     cJSON_AddStringToObject(root, "display_name", display_name);
     cJSON_AddStringToObject(root, "version", d->version[0] ? d->version : RELAY_VERSION);
-    cJSON_AddStringToObject(root, "open_path", "/");
-    cJSON_AddStringToObject(root, "docs_path", "/docs");
-    cJSON_AddStringToObject(root, "health_path", "/api/health");
-    cJSON_AddStringToObject(root, "api_help_path", "/api/help");
+    cJSON_AddStringToObject(root, "open_path", open_p);
+    cJSON_AddStringToObject(root, "docs_path", docs_p);
+    cJSON_AddStringToObject(root, "health_path", health_p);
+    cJSON_AddStringToObject(root, "api_help_path", api_p);
     caps = cJSON_AddArrayToObject(root, "capabilities");
     if (caps) {
         cJSON_AddItemToArray(caps, cJSON_CreateString("http"));
@@ -147,7 +174,8 @@ static void *discovery_thread(void *arg) {
         struct timeval tv;
         int sel, n;
         char path[CFG_PATH];
-        int http_port;
+        char base_path[64];
+        int http_port, advertise;
         char *json;
         char packet[4096];
         int plen;
@@ -171,9 +199,12 @@ static void *discovery_thread(void *arg) {
         strncpy(path, d->config_path, sizeof(path) - 1);
         path[sizeof(path) - 1] = '\0';
         http_port = d->http_port;
+        advertise = d->advertise_http_port;
+        strncpy(base_path, d->base_path, sizeof(base_path) - 1);
+        base_path[sizeof(base_path) - 1] = '\0';
         pthread_mutex_unlock(&d->mu);
 
-        json = build_reply_json(d, path, http_port);
+        json = build_reply_json(d, path, http_port, advertise, base_path);
         if (!json) continue; /* discoverable false → silent */
 
         plen = snprintf(packet, sizeof(packet), "%s\n%s", EADK_DISCOVERY_MAGIC, json);
@@ -185,6 +216,7 @@ static void *discovery_thread(void *arg) {
 }
 
 EadkDiscovery *eadk_discovery_start(const char *config_path, int http_port,
+                                    int advertise_http_port, const char *base_path,
                                     const char *tool, const char *version) {
     EadkDiscovery *d;
     int yes = 1;
@@ -212,6 +244,11 @@ EadkDiscovery *eadk_discovery_start(const char *config_path, int http_port,
         d->config_path[sizeof(d->config_path) - 1] = '\0';
     }
     d->http_port = http_port;
+    d->advertise_http_port = advertise_http_port > 0 ? advertise_http_port : http_port;
+    if (base_path && base_path[0])
+        relay_str_copy(d->base_path, sizeof(d->base_path), base_path);
+    else
+        relay_str_copy(d->base_path, sizeof(d->base_path), "/relay");
     relay_str_copy(d->tool, sizeof(d->tool), tool ? tool : "relay");
     relay_str_copy(d->version, sizeof(d->version), version ? version : RELAY_VERSION);
     d->sock = DISC_INVALID;
@@ -246,7 +283,8 @@ EadkDiscovery *eadk_discovery_start(const char *config_path, int http_port,
     return d;
 }
 
-void eadk_discovery_set(EadkDiscovery *d, const char *config_path, int http_port) {
+void eadk_discovery_set(EadkDiscovery *d, const char *config_path, int http_port,
+                        int advertise_http_port, const char *base_path) {
     if (!d) return;
     pthread_mutex_lock(&d->mu);
     if (config_path) {
@@ -256,6 +294,9 @@ void eadk_discovery_set(EadkDiscovery *d, const char *config_path, int http_port
         d->config_path[0] = '\0';
     }
     d->http_port = http_port;
+    d->advertise_http_port = advertise_http_port > 0 ? advertise_http_port : http_port;
+    if (base_path && base_path[0])
+        relay_str_copy(d->base_path, sizeof(d->base_path), base_path);
     pthread_mutex_unlock(&d->mu);
 }
 

@@ -30,6 +30,27 @@ static int uri_eq(struct mg_str u, const char *p) {
     return u.len == n && memcmp(u.buf, p, n) == 0;
 }
 
+/* Strip configured base_path from request URI into *out. Returns 0 on match. */
+static int uri_strip_base(const char *base_path, struct mg_str uri, struct mg_str *out) {
+    size_t blen;
+    if (!out) return -1;
+    if (!base_path || !base_path[0] || strcmp(base_path, "/") == 0) {
+        *out = uri;
+        return 0;
+    }
+    blen = strlen(base_path);
+    if (uri.len < blen || memcmp(uri.buf, base_path, blen) != 0) return -1;
+    if (uri.len == blen) {
+        out->buf = (char *)"/";
+        out->len = 1;
+        return 0;
+    }
+    if (uri.buf[blen] != '/') return -1;
+    out->buf = uri.buf + blen;
+    out->len = uri.len - blen;
+    return 0;
+}
+
 static void json_reply(struct mg_connection *c, int code, const char *json) {
     mg_http_reply(c, code,
                   "Content-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\n",
@@ -544,6 +565,30 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
     RelayHttpServer *srv = (RelayHttpServer *)c->fn_data;
     if (ev == MG_EV_HTTP_MSG) {
         struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+        const char *bp = (srv && srv->cfg && srv->cfg->base_path[0]) ? srv->cfg->base_path
+                                                                      : "/relay";
+        struct mg_str stripped;
+
+        if (bp[0] && strcmp(bp, "/") != 0) {
+            size_t blen = strlen(bp);
+            char loc[96];
+            if (uri_eq(hm->uri, "/") || uri_eq(hm->uri, "")) {
+                snprintf(loc, sizeof(loc), "Location: %s/\r\n", bp);
+                mg_http_reply(c, 302, loc, "");
+                return;
+            }
+            if (hm->uri.len == blen && memcmp(hm->uri.buf, bp, blen) == 0) {
+                snprintf(loc, sizeof(loc), "Location: %s/\r\n", bp);
+                mg_http_reply(c, 302, loc, "");
+                return;
+            }
+            if (uri_strip_base(bp, hm->uri, &stripped) != 0) {
+                err_json(c, 404, "use path prefix /relay/");
+                return;
+            }
+            hm->uri = stripped;
+        }
+
         if (uri_eq(hm->uri, "/")) {
             relay_http_page_control(c, srv);
             return;
@@ -589,13 +634,19 @@ void relay_http_free(RelayHttpServer *srv) {
 }
 
 int relay_http_start(RelayHttpServer *srv, int port) {
-    char url[64];
+    char url[96];
+    const char *bind;
+    const char *bp;
     if (!srv) return -1;
-    snprintf(url, sizeof(url), "http://0.0.0.0:%d", port);
+    bind = (srv->cfg && srv->cfg->http_bind[0]) ? srv->cfg->http_bind : "127.0.0.1";
+    bp = (srv->cfg && srv->cfg->base_path[0]) ? srv->cfg->base_path : "/relay";
+    snprintf(url, sizeof(url), "http://%s:%d", bind, port);
     if (!mg_http_listen(&srv->mgr, url, fn, srv)) return -1;
     srv->port = port;
     srv->running = 1;
-    relay_log("[relay-c] HTTP listening on %s", url);
+    relay_log("[relay] HTTP listening on %s base_path=%s advertise=%d", url, bp,
+              (srv->cfg && srv->cfg->advertise_http_port > 0) ? srv->cfg->advertise_http_port
+                                                              : port);
     return 0;
 }
 

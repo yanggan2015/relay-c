@@ -3,7 +3,10 @@
     "tool": "relay"
   },
   "server": {
-    "port": 18053,
+    "port": 18153,
+    "http_bind": "127.0.0.1",
+    "base_path": "/relay",
+    "advertise_http_port": 18081,
     "discoverable": true,
     "display_name": "relay-lab"
   },

@@ -24,8 +24,11 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
     }
 
     http_port = relay_http_port(srv);
-    pos += (size_t)snprintf(html + pos, cap - pos, "%s%s",
-        relay_page_head("relay-c 控制"), relay_page_nav("control"));
+    {
+        const char *bp = cfg->base_path[0] ? cfg->base_path : "/relay";
+        pos += (size_t)snprintf(html + pos, cap - pos, "%s%s",
+            relay_page_head("relay 控制"), relay_page_nav("control", bp));
+    }
 
     pos += (size_t)snprintf(html + pos, cap - pos,
         "<div class=\"kpi\">"
@@ -115,13 +118,16 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
     pos += (size_t)snprintf(html + pos, cap - pos,
         "</div></section>"
         "<script>"
-        "async function j(u){const r=await fetch(u);return[r,await r.json()];}"
+        "const BP='%s';"
+        "async function j(u){const r=await fetch(BP+u);return[r,await r.json()];}"
         "function st(id,ok,t){const e=document.getElementById(id);e.className=ok?'status ok':'status err';e.textContent=t;}"
         "async function relaySet(n,ch,s){const[r,d]=await j(`/api/relays/${encodeURIComponent(n)}/relay?channel=${ch}&state=${s}`);st('st-'+n,r.ok,r.ok?`CH${ch} => ${s?'开':'关'}`:(d.error||'fail'));}"
         "async function relayState(n,ch){const[r,d]=await j(`/api/relays/${encodeURIComponent(n)}/state?channel=${ch}`);st('st-'+n,r.ok,r.ok?`CH${ch} => ${d.state?'开':'关'}`:(d.error||'fail'));}"
         "async function boardAct(n,a){const[r,d]=await j(`/api/boards/${encodeURIComponent(n)}/action?action=${a}`);st('bst-'+n,r.ok,r.ok?`${a} ok`:(d.error||'fail'));}"
         "async function boardState(n){const[r,d]=await j(`/api/boards/${encodeURIComponent(n)}/state`);st('bst-'+n,r.ok,r.ok?JSON.stringify(d.states):(d.error||'fail'));}"
-        "</script>%s", relay_page_tail());
+        "</script>%s",
+        cfg->base_path[0] ? cfg->base_path : "/relay",
+        relay_page_tail());
 
     mg_http_reply(c, 200, "Content-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\n", "%s", html);
     free(html);

@@ -6,7 +6,7 @@ PKG_CONFIG ?= pkg-config
 
 OUTDIR ?= output
 BUILDDIR := $(OUTDIR)/build
-DISTDIR := $(OUTDIR)/relay-c
+DISTDIR := $(OUTDIR)/relay
 
 CFLAGS_COMMON := -Wall -Wno-unused-parameter -D_WIN32_WINNT=0x0601 \
 	-fstack-protector-strong -Iinclude -Ithird_party
@@ -26,14 +26,14 @@ endif
 CFLAGS += $(CJSON_CFLAGS)
 ifeq ($(OS),Windows_NT)
   LIBS := $(CJSON_LIBS) -lws2_32 -lpthread
-  APP := $(BUILDDIR)/relay-c.exe
+  APP := $(BUILDDIR)/relay.exe
   TEST := $(BUILDDIR)/test_relay.exe
-  EXE_NAME := relay-c.exe
+  EXE_NAME := relay.exe
 else
   LIBS := $(CJSON_LIBS) -lpthread
-  APP := $(BUILDDIR)/relay-c
+  APP := $(BUILDDIR)/relay
   TEST := $(BUILDDIR)/test_relay
-  EXE_NAME := relay-c
+  EXE_NAME := relay
 endif
 
 SRC := src/main.c src/util.c src/action.c src/protocol.c src/serial.c src/config.c \

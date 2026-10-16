@@ -42,7 +42,10 @@ static void docs_base_url(RelayHttpServer *srv, struct mg_http_message *hm,
     char lan[64];
     char qhost[256];
     struct mg_str *hdr;
+    AppConfig *cfg = relay_http_config(srv);
     int port = relay_http_port(srv);
+    int adv = (cfg && cfg->advertise_http_port > 0) ? cfg->advertise_http_port : port;
+    const char *bp = (cfg && cfg->base_path[0]) ? cfg->base_path : "/relay";
 
     host[0] = qhost[0] = '\0';
     mg_http_get_var(&hm->query, "host", qhost, sizeof(qhost));
@@ -56,15 +59,15 @@ static void docs_base_url(RelayHttpServer *srv, struct mg_http_message *hm,
 
     if (host[0] && !host_is_local(host)) {
         if (strchr(host, ':'))
-            snprintf(base, cap, "http://%s", host);
+            snprintf(base, cap, "http://%s%s", host, bp);
         else
-            snprintf(base, cap, "http://%s:%d", host, port);
+            snprintf(base, cap, "http://%s:%d%s", host, adv, bp);
         return;
     }
 
     if (relay_detect_lan_ip(lan, sizeof(lan)) != 0 || !lan[0])
         relay_str_copy(lan, sizeof(lan), "127.0.0.1");
-    snprintf(base, cap, "http://%s:%d", lan, port);
+    snprintf(base, cap, "http://%s:%d%s", lan, adv, bp);
 }
 
 static size_t md_curl(char *md, size_t cap, size_t pos,
@@ -194,14 +197,16 @@ void relay_http_page_docs(struct mg_connection *c, RelayHttpServer *srv,
         return;
     }
 
-    pos = (size_t)snprintf(html, html_cap, "%s%s<style>%s</style>",
-                           relay_page_head("Relay-C HTTP Docs"), relay_page_nav("docs"),
-                           DOCS_EXTRA_CSS);
-    pos += (size_t)snprintf(html + pos, html_cap - pos,
+    {
+        const char *bp = cfg->base_path[0] ? cfg->base_path : "/relay";
+        pos = (size_t)snprintf(html, html_cap, "%s%s<style>%s</style>",
+                               relay_page_head("Relay HTTP Docs"), relay_page_nav("docs", bp),
+                               DOCS_EXTRA_CSS);
+        pos += (size_t)snprintf(html + pos, html_cap - pos,
         "<article class=\"card\">"
         "<h2>GET Command Docs</h2>"
         "<p class=\"sub\">Base URL: <strong>%s</strong> · "
-        "<a href=\"/docs?format=md\">纯 Markdown</a></p>"
+        "<a href=\"%s/docs?format=md\">纯 Markdown</a></p>"
         "<div class=\"docs-tabs\">"
         "<button type=\"button\" class=\"docs-tab active\" onclick=\"showDocsTab('preview')\">Markdown 预览</button>"
         "<button type=\"button\" class=\"docs-tab\" onclick=\"showDocsTab('source')\">Markdown 源码</button>"
@@ -215,7 +220,8 @@ void relay_http_page_docs(struct mg_connection *c, RelayHttpServer *srv,
         "</div>"
         "<textarea id=\"mdSource\" readonly></textarea>"
         "</div></article>",
-        base);
+        base, bp);
+    }
 
     pos += (size_t)snprintf(html + pos, html_cap - pos,
         "<script type=\"text/plain\" id=\"mdData\">");

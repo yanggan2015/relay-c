@@ -146,6 +146,7 @@ static cJSON *query_to_board_json(struct mg_http_message *hm) {
 
 static void api_health(struct mg_connection *c, RelayHttpServer *srv) {
     cJSON *o = cJSON_CreateObject();
+    int adv = srv->cfg->advertise_http_port > 0 ? srv->cfg->advertise_http_port : srv->port;
     cJSON_AddBoolToObject(o, "ok", 1);
     cJSON_AddStringToObject(o, "status", "ok");
     cJSON_AddStringToObject(o, "tool", "relay");
@@ -155,6 +156,11 @@ static void api_health(struct mg_connection *c, RelayHttpServer *srv) {
     cJSON_AddNumberToObject(o, "relays", srv->cfg->n_relays);
     cJSON_AddNumberToObject(o, "boards", srv->cfg->n_boards);
     cJSON_AddNumberToObject(o, "http_port", srv->port);
+    cJSON_AddNumberToObject(o, "advertise_http_port", adv);
+    cJSON_AddStringToObject(o, "http_bind",
+                            srv->cfg->http_bind[0] ? srv->cfg->http_bind : "127.0.0.1");
+    cJSON_AddStringToObject(o, "base_path",
+                            srv->cfg->base_path[0] ? srv->cfg->base_path : "/relay");
     cJSON_AddStringToObject(o, "config_path", srv->cfg->config_path);
     char *s = cJSON_PrintUnformatted(o);
     cJSON_Delete(o);

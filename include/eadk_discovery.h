@@ -11,10 +11,14 @@ extern "C" {
 
 typedef struct EadkDiscovery EadkDiscovery;
 
-/* Start listener thread. config_path re-read each query for discoverable/display_name. */
+/* Start listener thread. config_path re-read each query for discoverable/display_name.
+ * advertise_http_port: external/gateway port (0 => http_port).
+ * base_path: e.g. "/relay" for open/health/api paths. */
 EadkDiscovery *eadk_discovery_start(const char *config_path, int http_port,
+                                    int advertise_http_port, const char *base_path,
                                     const char *tool, const char *version);
-void eadk_discovery_set(EadkDiscovery *d, const char *config_path, int http_port);
+void eadk_discovery_set(EadkDiscovery *d, const char *config_path, int http_port,
+                        int advertise_http_port, const char *base_path);
 void eadk_discovery_stop(EadkDiscovery *d);
 
 #ifdef __cplusplus

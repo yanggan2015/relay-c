@@ -81,7 +81,13 @@ const char *relay_page_styles(void) {
         ".editor-hint{font-size:12px;color:var(--brand);font-weight:600;margin:0 0 10px}"
         ".warn-box{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:12px;padding:11px 12px;margin-bottom:12px;line-height:1.5}"
         "@media(max-width:900px){.config-cols{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr 1fr}}"
-        "@media(max-width:560px){.wrap{padding:12px 12px 28px}.hero{padding:16px}.form-grid{grid-template-columns:1fr}}";
+        "@media(max-width:560px){.wrap{padding:12px 12px 28px}.hero{padding:16px}.form-grid{grid-template-columns:1fr}}"
+        /* iframe: legacy embedded vs EADK Manager kit (eadk_kit=1). */
+        "html.embedded .hero,html.kit .hero{display:none!important}"
+        "html.embedded .wrap,html.kit .wrap{max-width:none;padding:12px 12px 20px}"
+        "html.embedded .foot,html.kit .foot{display:none!important}"
+        "html.embedded body,html.kit body{background:#eef3f6}"
+        "html.kit,html.kit body{min-height:100%}";
 }
 
 const char *relay_page_head(const char *title) {
@@ -89,8 +95,13 @@ const char *relay_page_head(const char *title) {
     snprintf(buf, sizeof(buf),
         "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"/>"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>"
-        "<title>%s</title><style>%s</style></head><body><div class=\"wrap\">",
-        title ? title : "relay-c", relay_page_styles());
+        "<title>%s</title><style>%s</style>"
+        "<script>(function(){if(window.self===window.top)return;try{"
+        "var kit=/(?:\\?|&)eadk_kit=1(?:&|$)/.test(location.search||'');"
+        "document.documentElement.classList.add(kit?'kit':'embedded');"
+        "}catch(e){}})();</script>"
+        "</head><body><div class=\"wrap\">",
+        title ? title : "relay", relay_page_styles());
     return buf;
 }
 
@@ -98,8 +109,9 @@ const char *relay_page_tail(void) {
     return "<p class=\"foot\">Embedded AI Development Kit</p></div></body></html>";
 }
 
-const char *relay_page_nav(const char *active) {
-    static char nav[1024];
+const char *relay_page_nav(const char *active, const char *base_path) {
+    static char nav[1280];
+    const char *bp = (base_path && base_path[0] && strcmp(base_path, "/") != 0) ? base_path : "";
     snprintf(nav, sizeof(nav),
         "<header class=\"hero\">"
         "<div class=\"hero-top\"><div>"
@@ -108,13 +120,13 @@ const char *relay_page_nav(const char *active) {
         "<p>继电器控制平台 v%s · 浏览器或桌面壳操作</p>"
         "</div></div>"
         "<nav class=\"nav\">"
-        "<a href=\"/\" class=\"%s\">控制</a>"
-        "<a href=\"/config\" class=\"%s\">配置</a>"
-        "<a href=\"/docs\" class=\"%s\">说明</a>"
+        "<a href=\"%s/\" class=\"%s\">控制</a>"
+        "<a href=\"%s/config\" class=\"%s\">配置</a>"
+        "<a href=\"%s/docs\" class=\"%s\">说明</a>"
         "</nav></header>",
         RELAY_VERSION,
-        (active && strcmp(active, "control") == 0) ? "active" : "",
-        (active && strcmp(active, "config") == 0) ? "active" : "",
-        (active && strcmp(active, "docs") == 0) ? "active" : "");
+        bp, (active && strcmp(active, "control") == 0) ? "active" : "",
+        bp, (active && strcmp(active, "config") == 0) ? "active" : "",
+        bp, (active && strcmp(active, "docs") == 0) ? "active" : "");
     return nav;
 }

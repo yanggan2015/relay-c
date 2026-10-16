@@ -8,7 +8,7 @@ set "PATH=%MINGW%\bin;%MSYS%\usr\bin;%PATH%"
 if defined USERPROFILE set "HOME=%USERPROFILE%"
 
 echo ========================================
-echo  relay-c - build (Windows)
+echo  relay - build (Windows)
 echo ========================================
 
 if not exist "%MINGW%\bin\gcc.exe" (
@@ -17,6 +17,7 @@ if not exist "%MINGW%\bin\gcc.exe" (
   exit /b 1
 )
 
+taskkill /IM relay.exe /F >nul 2>&1
 taskkill /IM relay-c.exe /F >nul 2>&1
 taskkill /IM relay_desktop.exe /F >nul 2>&1
 "%MINGW%\bin\mingw32-make.exe" clean all test package
@@ -27,7 +28,7 @@ if errorlevel 1 (
 
 echo.
 echo OK:
-echo   output\build\relay-c.exe
-echo   output\relay-c\
-echo 运行: output\relay-c\run.bat  或  仓库根目录 run.bat
+echo   output\build\relay.exe
+echo   output\relay\
+echo 运行: output\relay\run.bat  或  仓库根目录 run.bat
 exit /b 0

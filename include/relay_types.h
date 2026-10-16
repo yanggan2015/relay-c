@@ -111,6 +111,9 @@ typedef struct {
     int          server_port;
     int          server_port_set;
     int          discoverable; /* default 1 */
+    int          advertise_http_port; /* gateway/external port; 0 => server_port */
+    char         http_bind[64];       /* default 127.0.0.1 */
+    char         base_path[64];       /* e.g. /relay */
     char         display_name[128];
     RelayConfig  relays[RELAY_MAX_RELAYS];
     int          n_relays;

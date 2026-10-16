@@ -169,6 +169,9 @@ int relay_config_load(AppConfig *out, const char *path) {
     if (!out || !path) return -1;
     memset(out, 0, sizeof(*out));
     out->discoverable = 1;
+    out->advertise_http_port = 18081;
+    relay_str_copy(out->http_bind, sizeof(out->http_bind), "127.0.0.1");
+    relay_str_copy(out->base_path, sizeof(out->base_path), "/relay");
     relay_str_copy(out->config_path, sizeof(out->config_path), path);
     relay_str_copy(out->platform, sizeof(out->platform), relay_detect_platform());
 
@@ -194,12 +197,31 @@ int relay_config_load(AppConfig *out, const char *path) {
     server = cJSON_GetObjectItemCaseSensitive(root, "server");
     if (cJSON_IsObject(server)) {
         if (cJSON_GetObjectItemCaseSensitive(server, "port")) {
-            out->server_port = json_int(server, "port", 18053);
+            out->server_port = json_int(server, "port", 18153);
             out->server_port_set = 1;
         }
         out->discoverable = json_bool(server, "discoverable", 1);
         relay_str_copy(out->display_name, sizeof(out->display_name),
                        json_str(server, "display_name"));
+        {
+            const char *bind = json_str(server, "http_bind");
+            if (bind[0]) relay_str_copy(out->http_bind, sizeof(out->http_bind), bind);
+        }
+        {
+            const char *bp = json_str(server, "base_path");
+            if (bp[0]) {
+                if (bp[0] != '/')
+                    snprintf(out->base_path, sizeof(out->base_path), "/%s", bp);
+                else
+                    relay_str_copy(out->base_path, sizeof(out->base_path), bp);
+            }
+            {
+                size_t bl = strlen(out->base_path);
+                while (bl > 1 && out->base_path[bl - 1] == '/')
+                    out->base_path[--bl] = '\0';
+            }
+        }
+        out->advertise_http_port = json_int(server, "advertise_http_port", 18081);
     }
 
     relays = cJSON_GetObjectItemCaseSensitive(root, "relays");
@@ -307,6 +329,12 @@ int relay_config_save(const AppConfig *cfg) {
     cJSON_AddBoolToObject(server, "discoverable", cfg->discoverable ? 1 : 0);
     if (cfg->display_name[0])
         cJSON_AddStringToObject(server, "display_name", cfg->display_name);
+    if (cfg->http_bind[0])
+        cJSON_AddStringToObject(server, "http_bind", cfg->http_bind);
+    if (cfg->base_path[0])
+        cJSON_AddStringToObject(server, "base_path", cfg->base_path);
+    if (cfg->advertise_http_port > 0)
+        cJSON_AddNumberToObject(server, "advertise_http_port", cfg->advertise_http_port);
     cJSON_AddItemToObject(root, "server", server);
 
     relays = cJSON_CreateObject();

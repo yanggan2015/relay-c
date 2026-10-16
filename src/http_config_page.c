@@ -1,4 +1,5 @@
 #include "http_pages.h"
+#include "relay_http.h"
 #include "util.h"
 #include "mongoose.h"
 
@@ -10,7 +11,8 @@ void relay_http_page_config(struct mg_connection *c, RelayHttpServer *srv) {
     char *html;
     size_t cap = 65536;
     size_t pos = 0;
-    (void)srv;
+    AppConfig *cfg = relay_http_config(srv);
+    const char *bp = (cfg && cfg->base_path[0]) ? cfg->base_path : "/relay";
 
     html = (char *)malloc(cap);
     if (!html) {
@@ -19,7 +21,7 @@ void relay_http_page_config(struct mg_connection *c, RelayHttpServer *srv) {
     }
 
     pos += (size_t)snprintf(html + pos, cap - pos, "%s%s",
-        relay_page_head("Relay-C Config"), relay_page_nav("config"));
+        relay_page_head("Relay Config"), relay_page_nav("config", bp));
 
     pos += (size_t)snprintf(html + pos, cap - pos,
         "<section class=\"config-layout\">"
@@ -147,9 +149,10 @@ void relay_http_page_config(struct mg_connection *c, RelayHttpServer *srv) {
         "  if(curWin)setSelect('relayWinPort',curWin);"
         "  if(curLinux)setSelect('relayLinuxPort',curLinux);"
         "}"
+        "const BP='%s';"
         "async function loadPortSelects(){"
         "  try{"
-        "    const r=await fetch('/api/serial/ports');"
+        "    const r=await fetch(BP+'/api/serial/ports');"
         "    detectedPorts=await r.json();"
         "  }catch(e){detectedPorts={windows_ports:[],linux_ports:[],platform:''};}"
         "  refreshPortSelects();"
@@ -191,12 +194,12 @@ void relay_http_page_config(struct mg_connection *c, RelayHttpServer *srv) {
         "  document.querySelectorAll('#boardList .chip').forEach(el=>el.classList.toggle('active',el.dataset.name===editingBoard));"
         "}"
         "async function loadMeta(){"
-        "  const h=await fetch('/api/health');const d=await h.json();"
+        "  const h=await fetch(BP+'/api/health');const d=await h.json();"
         "  document.getElementById('configPath').value=d.config_path||'';"
         "  document.getElementById('serverPort').value=d.http_port||'';"
         "}"
         "async function loadLists(){"
-        "  const [rr,bb]=await Promise.all([fetch('/api/config/relays'),fetch('/api/boards')]);"
+        "  const [rr,bb]=await Promise.all([fetch(BP+'/api/config/relays'),fetch(BP+'/api/boards')]);"
         "  const rd=await rr.json(), bd=await bb.json();"
         "  latestRelays=rd.relays||{}; latestBoards=bd.boards||{};"
         "  const rl=document.getElementById('relayList'); rl.innerHTML='';"
@@ -256,18 +259,18 @@ void relay_http_page_config(struct mg_connection *c, RelayHttpServer *srv) {
         "};}"
         "async function createRelay(){"
         "  const p=relayParams(); if(!p.name)return st('relayStatus',false,'name required');"
-        "  const r=await fetch('/api/config/relay/create?'+qs(p)); const d=await r.json();"
+        "  const r=await fetch(BP+'/api/config/relay/create?'+qs(p)); const d=await r.json();"
         "  st('relayStatus',r.ok,r.ok?'created':(d.error||'fail')); if(r.ok)loadLists();"
         "}"
         "async function updateRelay(){"
         "  if(!editingRelay)return st('relayStatus',false,'请先在上方列表选择 relay');"
         "  const p=relayParams(); p.name=editingRelay; p.new_name=document.getElementById('relayName').value.trim();"
-        "  const r=await fetch('/api/config/relay/update?'+qs(p)); const d=await r.json();"
+        "  const r=await fetch(BP+'/api/config/relay/update?'+qs(p)); const d=await r.json();"
         "  st('relayStatus',r.ok,r.ok?'updated':(d.error||'fail')); if(r.ok){clearRelayEditor();loadLists();}"
         "}"
         "async function deleteRelay(n){"
         "  if(!confirm('删除 relay '+n+'?'))return;"
-        "  const r=await fetch('/api/config/relay/delete?name='+encodeURIComponent(n));"
+        "  const r=await fetch(BP+'/api/config/relay/delete?name='+encodeURIComponent(n));"
         "  const d=await r.json(); st('relayStatus',r.ok,r.ok?'deleted':(d.error||'fail'));"
         "  if(r.ok){if(editingRelay===n)clearRelayEditor();loadLists();}"
         "}"
@@ -316,33 +319,33 @@ void relay_http_page_config(struct mg_connection *c, RelayHttpServer *srv) {
         "}"
         "async function createBoard(){"
         "  const p=boardParams(); if(!p.name)return st('boardStatus',false,'name required');"
-        "  const r=await fetch('/api/config/board/create?'+qs(p)); const d=await r.json();"
+        "  const r=await fetch(BP+'/api/config/board/create?'+qs(p)); const d=await r.json();"
         "  st('boardStatus',r.ok,r.ok?'created':(d.error||'fail')); if(r.ok)loadLists();"
         "}"
         "async function updateBoard(){"
         "  if(!editingBoard)return st('boardStatus',false,'请先在上方列表选择 board');"
         "  const p=boardParams(); p.name=editingBoard; p.new_name=document.getElementById('boardName').value.trim();"
-        "  const r=await fetch('/api/config/board/update?'+qs(p)); const d=await r.json();"
+        "  const r=await fetch(BP+'/api/config/board/update?'+qs(p)); const d=await r.json();"
         "  st('boardStatus',r.ok,r.ok?'updated':(d.error||'fail')); if(r.ok){clearBoardEditor();loadLists();}"
         "}"
         "async function deleteBoard(n){"
         "  if(!confirm('删除 board '+n+'?'))return;"
-        "  const r=await fetch('/api/config/board/delete?name='+encodeURIComponent(n));"
+        "  const r=await fetch(BP+'/api/config/board/delete?name='+encodeURIComponent(n));"
         "  const d=await r.json(); st('boardStatus',r.ok,r.ok?'deleted':(d.error||'fail'));"
         "  if(r.ok){if(editingBoard===n)clearBoardEditor();loadLists();}"
         "}"
         "async function saveServerPort(){"
         "  const p=document.getElementById('serverPort').value.trim();"
-        "  const r=await fetch('/api/config/server/set?port='+encodeURIComponent(p));"
+        "  const r=await fetch(BP+'/api/config/server/set?port='+encodeURIComponent(p));"
         "  const d=await r.json(); st('serverStatus',r.ok,r.ok?'port saved (restart to apply)':(d.error||'fail'));"
         "}"
         "async function reloadConfig(){"
-        "  const r=await fetch('/api/config/reload'); const d=await r.json();"
+        "  const r=await fetch(BP+'/api/config/reload'); const d=await r.json();"
         "  st('serverStatus',r.ok,r.ok?'reloaded':(d.error||'fail')); if(r.ok)loadLists();"
         "}"
         "async function initPage(){initStaticSelects();await Promise.all([loadMeta(),loadPortSelects()]);await loadLists();}"
         "initPage();"
-        "</script>");
+        "</script>", bp);
 
     pos += (size_t)snprintf(html + pos, cap - pos, "%s", relay_page_tail());
 
