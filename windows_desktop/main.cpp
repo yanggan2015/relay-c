@@ -1,6 +1,6 @@
 /*
- * Windows desktop shell: WebView2 + relay.exe.
- * Shared webview headers: ../../ssh-bridge-c/third_party
+ * Windows desktop shell: WebView2 + relay-c.exe.
+ * Shared webview headers: ../../ssh-bridge/third_party
  */
 #define WIN32_LEAN_AND_MEAN
 
@@ -22,7 +22,7 @@ namespace {
 constexpr int kDefaultHttpPort = 18153;
 constexpr int kHealthTimeoutMs = 30000;
 constexpr int kHealthIntervalMs = 200;
-constexpr const wchar_t *kChildExe = L"relay.exe";
+constexpr const wchar_t *kChildExe = L"relay-c.exe";
 constexpr const wchar_t *kDefaultConfig = L"boards.json";
 constexpr const wchar_t *kKitConfig = L"relay_config.json";
 constexpr const char *kAppTitle = "relay";
@@ -225,7 +225,7 @@ void close_child(ChildProc &c) {
 bool start_child(ChildProc &out, const std::wstring &dir, const Options &o, int http_port) {
   std::wstring exe = join_path(dir, kChildExe);
   if (GetFileAttributesW(exe.c_str()) == INVALID_FILE_ATTRIBUTES) {
-    show_msg(L"未找到同目录下的 relay.exe");
+    show_msg(L"未找到同目录下的 relay-c.exe");
     return false;
   }
 
@@ -251,7 +251,7 @@ bool start_child(ChildProc &out, const std::wstring &dir, const Options &o, int 
                                 CREATE_NO_WINDOW | CREATE_SUSPENDED, nullptr, dir.c_str(), &si,
                                 &pi);
   if (!created) {
-    show_msg(L"无法启动 relay.exe");
+    show_msg(L"无法启动 relay-c.exe");
     return false;
   }
 
@@ -290,7 +290,7 @@ void print_help_console() {
   printf("  --http-port N       HTTP port (default from config or %d)\n", kDefaultHttpPort);
   printf("  --smoke-test        start child, wait /health, exit (no UI)\n");
   printf("  -h, --help          show this help\n");
-  printf("\nStarts relay.exe in the same folder and embeds the WebUI.\n");
+  printf("\nStarts relay-c.exe in the same folder and embeds the WebUI.\n");
 }
 
 } // namespace

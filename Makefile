@@ -6,7 +6,7 @@ PKG_CONFIG ?= pkg-config
 
 OUTDIR ?= output
 BUILDDIR := $(OUTDIR)/build
-DISTDIR := $(OUTDIR)/relay
+DISTDIR := $(OUTDIR)/relay-c
 
 CFLAGS_COMMON := -Wall -Wno-unused-parameter -D_WIN32_WINNT=0x0601 \
 	-fstack-protector-strong -Iinclude -Ithird_party
@@ -26,14 +26,14 @@ endif
 CFLAGS += $(CJSON_CFLAGS)
 ifeq ($(OS),Windows_NT)
   LIBS := $(CJSON_LIBS) -lws2_32 -lpthread
-  APP := $(BUILDDIR)/relay.exe
+  APP := $(BUILDDIR)/relay-c.exe
   TEST := $(BUILDDIR)/test_relay.exe
-  EXE_NAME := relay.exe
+  EXE_NAME := relay-c.exe
 else
   LIBS := $(CJSON_LIBS) -lpthread
-  APP := $(BUILDDIR)/relay
+  APP := $(BUILDDIR)/relay-c
   TEST := $(BUILDDIR)/test_relay
-  EXE_NAME := relay
+  EXE_NAME := relay-c
 endif
 
 SRC := src/main.c src/util.c src/action.c src/protocol.c src/serial.c src/config.c \
@@ -44,7 +44,7 @@ SRC := src/main.c src/util.c src/action.c src/protocol.c src/serial.c src/config
 OBJ := $(addprefix $(BUILDDIR)/,$(SRC:.c=.o))
 
 DESKTOP := $(BUILDDIR)/relay_desktop.exe
-WEBVIEW2_DLL := ../ssh-bridge-c/third_party/webview2/x64/WebView2Loader.dll
+WEBVIEW2_DLL := ../ssh-bridge/third_party/webview2/x64/WebView2Loader.dll
 
 .PHONY: all test clean dirs desktop package
 

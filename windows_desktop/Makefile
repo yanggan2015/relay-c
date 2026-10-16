@@ -2,7 +2,7 @@
 # Build: mingw32-make -C windows_desktop
 # Or from repo root: mingw32-make desktop
 #
-# Shared webview: ../../ssh-bridge-c/third_party (sibling repo)
+# Shared webview: ../../ssh-bridge/third_party (sibling repo)
 
 CXX ?= g++
 MINGW ?= C:/msys64/mingw64
@@ -12,7 +12,7 @@ BUILDDIR := $(OUTDIR)/build/windows_desktop
 APP := $(OUTDIR)/build/relay_desktop.exe
 APP_COPY := $(OUTDIR)/relay_desktop.exe
 RES := $(BUILDDIR)/desktop_res.o
-WEBVIEW_ROOT := $(ROOT)/../ssh-bridge-c/third_party
+WEBVIEW_ROOT := $(ROOT)/../ssh-bridge/third_party
 WEBVIEW2_DLL := $(WEBVIEW_ROOT)/webview2/x64/WebView2Loader.dll
 
 # Prefer MSYS bash so mkdir -p / cp / test work under recursive make from cmd.
@@ -41,7 +41,7 @@ $(RES): desktop.rc relay_desktop.ico desktop_res.h | dirs
 
 $(APP): main.cpp $(RES) $(WEBVIEW_ROOT)/webview/webview.h | dirs
 	@test -f $(WEBVIEW_ROOT)/webview2/include/WebView2.h || \
-		(echo "ERROR: missing WebView2.h — see ssh-bridge-c/third_party/webview2"; exit 1)
+		(echo "ERROR: missing WebView2.h — see ssh-bridge/third_party/webview2"; exit 1)
 	$(CXX) $(CXXFLAGS) -o $@ main.cpp $(RES) $(LIBS)
 	cp -f $@ $(APP_COPY)
 	@if [ -f "$(WEBVIEW2_DLL)" ]; then \
