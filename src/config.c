@@ -638,6 +638,10 @@ int relay_config_board_update(AppConfig *cfg, const char *name, const char *new_
         return -1;
     }
     parse_board(target, fields ? fields : cJSON_CreateObject(), &b);
+    if (!fields || !cJSON_GetObjectItemCaseSensitive(fields, "actions")) {
+        b.n_custom_actions = cfg->boards[idx].n_custom_actions;
+        memcpy(b.custom_actions, cfg->boards[idx].custom_actions, sizeof(b.custom_actions));
+    }
     if (relay_config_validate_board(&b, cfg, err, errcap) != 0) return -1;
     cfg->boards[idx] = b;
     if (relay_config_save(cfg) != 0) {

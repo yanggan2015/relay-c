@@ -593,7 +593,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data) {
             relay_http_page_control(c, srv);
             return;
         }
-        if (uri_eq(hm->uri, "/docs")) {
+        if (uri_eq(hm->uri, "/help") || uri_eq(hm->uri, "/docs")) {
             relay_http_page_docs(c, srv, hm);
             return;
         }

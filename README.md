@@ -13,7 +13,7 @@ copy boards.json.example boards.json
 run.bat
 ```
 
-浏览器打开：**http://127.0.0.1:18053/**（控制页 `/` · 配置编辑 `/config` · API 文档 `/docs`）
+浏览器打开：**http://127.0.0.1:18153/relay/**（控制页 `/` · 配置 `/config` · Agent 接口 `/help`）
 
 无硬件时用模拟模式：
 
@@ -200,7 +200,7 @@ Layer 0  基础设施      relay_lock.c (串口/动作锁) + config.c + action.c
 | `http_api.c` | health、config CRUD、热重载 |
 | `http_pages.c` | 共享样式 / 导航 |
 | `http_control_page.c` | 控制页 `/` |
-| `http_docs_page.c` | API 文档 `/docs`（Markdown 预览 / 源码） |
+| `http_docs_page.c` | Agent 接口 `/help`（`/docs` 别名；text/plain Markdown） |
 | `http_config_page.c` | Web 配置编辑页 `/config` |
 | `http_server.c` | HTTP 路由与 relay/board 控制 API |
 

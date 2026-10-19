@@ -230,50 +230,43 @@ static void api_serial_ports(struct mg_connection *c) {
 static void api_help(struct mg_connection *c, RelayHttpServer *srv) {
     cJSON *o = cJSON_CreateObject();
     cJSON *arr = cJSON_CreateArray();
-    char base[128];
     char *s;
-    snprintf(base, sizeof(base), "http://127.0.0.1:%d", srv->port);
+    const char *bp = (srv->cfg && srv->cfg->base_path[0]) ? srv->cfg->base_path : "/relay";
+    int adv = (srv->cfg && srv->cfg->advertise_http_port > 0) ? srv->cfg->advertise_http_port
+                                                              : 18081;
     cJSON_AddStringToObject(o, "tool", "relay");
     cJSON_AddStringToObject(o, "product", "EADK Relay");
     cJSON_AddStringToObject(o, "version", RELAY_VERSION);
-    cJSON_AddStringToObject(o, "base", base);
-#define ADD_CMD(name, path, demo) do { \
+    cJSON_AddNumberToObject(o, "http_port", srv->port);
+    cJSON_AddNumberToObject(o, "advertise_http_port", adv);
+#define ADD_OP(id, method, path_fmt, side, summary) do { \
     cJSON *it = cJSON_CreateObject(); \
-    cJSON_AddStringToObject(it, "name", name); \
-    cJSON_AddStringToObject(it, "path", path); \
-    cJSON_AddStringToObject(it, "example", demo); \
+    char _p[192]; \
+    snprintf(_p, sizeof(_p), path_fmt, bp); \
+    cJSON_AddStringToObject(it, "id", id); \
+    cJSON_AddStringToObject(it, "method", method); \
+    cJSON_AddStringToObject(it, "path", _p); \
+    cJSON_AddBoolToObject(it, "side_effect", side); \
+    cJSON_AddStringToObject(it, "summary", summary); \
     cJSON_AddItemToArray(arr, it); \
 } while (0)
-    ADD_CMD("health", "/api/health or /health",
-            "curl \"http://127.0.0.1:PORT/api/health\"");
-    ADD_CMD("help", "/api/help",
-            "curl \"http://127.0.0.1:PORT/api/help\"");
-    ADD_CMD("list relays", "/api/relays",
-            "curl \"http://127.0.0.1:PORT/api/relays\"");
-    ADD_CMD("list boards", "/api/boards",
-            "curl \"http://127.0.0.1:PORT/api/boards\"");
-    ADD_CMD("boards support", "/api/boards/support",
-            "curl \"http://127.0.0.1:PORT/api/boards/support\"");
-    ADD_CMD("relay on/off", "/api/relays/{name}/relay?channel=&state=",
-            "curl \"http://127.0.0.1:PORT/api/relays/NAME/relay?channel=1&state=1\"");
-    ADD_CMD("relay state", "/api/relays/{name}/state?channel=",
-            "curl \"http://127.0.0.1:PORT/api/relays/NAME/state\"");
-    ADD_CMD("relay raw", "/api/relays/{name}/raw?data=&format=",
-            "curl \"http://127.0.0.1:PORT/api/relays/NAME/raw?data=A0%2001%2001%20A2\"");
-    ADD_CMD("board action", "/api/boards/{name}/action?action=",
-            "curl \"http://127.0.0.1:PORT/api/boards/NAME/action?action=reset\"");
-    ADD_CMD("board state", "/api/boards/{name}/state",
-            "curl \"http://127.0.0.1:PORT/api/boards/NAME/state\"");
-    ADD_CMD("serial ports", "/api/serial/ports",
-            "curl \"http://127.0.0.1:PORT/api/serial/ports\"");
-    ADD_CMD("config reload", "/api/config/reload",
-            "curl \"http://127.0.0.1:PORT/api/config/reload\"");
-    ADD_CMD("config relays", "/api/config/relays",
-            "curl \"http://127.0.0.1:PORT/api/config/relays\"");
-    ADD_CMD("config boards", "/api/config/boards",
-            "curl \"http://127.0.0.1:PORT/api/config/boards\"");
-#undef ADD_CMD
-    cJSON_AddItemToObject(o, "commands", arr);
+    ADD_OP("health", "GET", "%s/health", 0, "Liveness; tool=relay");
+    ADD_OP("help.agent", "GET", "%s/help", 0, "Agent interface Markdown");
+    ADD_OP("help.api", "GET", "%s/api/help", 0, "Machine-readable operations");
+    ADD_OP("boards.list", "GET", "%s/api/boards", 0, "List boards");
+    ADD_OP("boards.support", "GET", "%s/api/boards/support", 0, "Board capabilities");
+    ADD_OP("boards.action", "GET", "%s/api/boards/{name}/action?action=", 1,
+           "Board action reset|upgrade|custom");
+    ADD_OP("boards.state", "GET", "%s/api/boards/{name}/state", 0, "Board channel state");
+    ADD_OP("relays.list", "GET", "%s/api/relays", 0, "List relays");
+    ADD_OP("relays.set", "GET", "%s/api/relays/{name}/relay?channel=&state=", 1,
+           "Set relay channel on/off");
+    ADD_OP("relays.state", "GET", "%s/api/relays/{name}/state?channel=", 0, "Read relay state");
+    ADD_OP("relays.raw", "GET", "%s/api/relays/{name}/raw?data=", 1, "Send raw frame");
+    ADD_OP("serial.ports", "GET", "%s/api/serial/ports", 0, "Enumerate serial ports");
+    ADD_OP("config.reload", "GET", "%s/api/config/reload", 1, "Reload config");
+#undef ADD_OP
+    cJSON_AddItemToObject(o, "operations", arr);
     s = cJSON_PrintUnformatted(o);
     cJSON_Delete(o);
     json_reply(c, 200, s);

@@ -123,16 +123,16 @@ const char *relay_page_nav(const char *active, const char *base_path) {
         "<div class=\"hero-top\"><div>"
         "<p class=\"eyebrow\">EADK · Tool</p>"
         "<h1>EADK Relay</h1>"
-        "<p>继电器控制平台 v%s · 浏览器或桌面壳操作</p>"
         "</div></div>"
         "<nav class=\"nav\">"
         "<a href=\"%s/\" class=\"%s\">控制</a>"
         "<a href=\"%s/config\" class=\"%s\">配置</a>"
-        "<a href=\"%s/docs\" class=\"%s\">说明</a>"
+        "<a href=\"%s/help\" class=\"%s\">Agent 接口</a>"
         "</nav></header>",
-        RELAY_VERSION,
         bp, (active && strcmp(active, "control") == 0) ? "active" : "",
         bp, (active && strcmp(active, "config") == 0) ? "active" : "",
-        bp, (active && strcmp(active, "docs") == 0) ? "active" : "");
+        bp, (active && (strcmp(active, "help") == 0 || strcmp(active, "docs") == 0))
+                ? "active"
+                : "");
     return nav;
 }

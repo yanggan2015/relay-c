@@ -131,7 +131,7 @@ static char *build_reply_json(EadkDiscovery *d, const char *config_path, int htt
         relay_str_copy(host, sizeof(host), "127.0.0.1");
 
     path_join_base(open_p, sizeof(open_p), bp, "/");
-    path_join_base(docs_p, sizeof(docs_p), bp, "/docs");
+    path_join_base(docs_p, sizeof(docs_p), bp, "/help");
     path_join_base(health_p, sizeof(health_p), bp, "/health");
     path_join_base(api_p, sizeof(api_p), bp, "/api/help");
 
