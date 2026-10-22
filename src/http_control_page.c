@@ -123,8 +123,7 @@ void relay_http_page_control(struct mg_connection *c, RelayHttpServer *srv) {
             }
         }
         pos += (size_t)snprintf(html + pos, cap - pos,
-            "<button class=\"ghost\" onclick=\"boardState('%s')\">状态</button>"
-            "</div><div id=\"bst-%s\" class=\"status\"></div></article>", b->name, b->name);
+            "</div><div id=\"bst-%s\" class=\"status\"></div></article>", b->name);
     }
 
     pos += (size_t)snprintf(html + pos, cap - pos,
