@@ -66,7 +66,7 @@ static int test_config(void) {
 
     if (relay_config_load(&cfg, "boards.json") != 0) return fail("load config");
     if (cfg.n_relays < 1) return fail("no relays");
-    if (cfg.server_port != 18153) return fail("port not 18153");
+    if (cfg.server_port != 18083) return fail("port not 18083");
     if (cfg.n_boards < 1) return fail("no boards");
     if (!cfg.boards[0].has_upgrade_mode) return fail("upgrade_mode missing");
     if (cfg.boards[0].n_custom_actions < 1) return fail("custom actions missing");

@@ -35,7 +35,7 @@ static void print_usage(const char *prog) {
             "  %s board-action <board> <action> [-c] [-p]\n"
             "  %s relay-set <relay> <channel> <0|1> [-c] [-p]\n\n"
             "CLI write ops use local HTTP (server must be running).\n"
-            "Default: bind 127.0.0.1:18153 base_path=/relay advertise=18081\n",
+            "Default: bind 127.0.0.1:18083 base_path=/relay advertise=18081\n",
             RELAY_VERSION, prog, prog, prog, prog, prog, prog, prog);
 }
 
@@ -94,7 +94,7 @@ static int resolve_port(const char *config_path, int port_flag) {
     memset(&cfg, 0, sizeof(cfg));
     if (relay_config_load(&cfg, config_path) == 0 && cfg.server_port_set)
         return cfg.server_port;
-    return 18153;
+    return 18083;
 }
 
 static int load_cli_cfg(const char *config_path, AppConfig *cfg) {
@@ -141,7 +141,7 @@ static int cmd_status(const char *config_path, int port_flag) {
         return 1;
     }
     printf("config_path=%s\n", cfg.config_path);
-    printf("server_port=%d\n", cfg.server_port_set ? cfg.server_port : 18153);
+    printf("server_port=%d\n", cfg.server_port_set ? cfg.server_port : 18083);
     printf("http_bind=%s\n", cfg.http_bind);
     printf("base_path=%s\n", cfg.base_path);
     printf("advertise_http_port=%d\n", cfg.advertise_http_port);
@@ -162,7 +162,7 @@ static int run_serve(int argc, char **argv) {
     const char *cfg_arg = NULL;
     char cfgpath[RELAY_MAX_PATH];
     int port_cli = -1;
-    int port = 18153;
+    int port = 18083;
     int dry_run = 0;
     char verr[256];
     int i;
@@ -226,7 +226,7 @@ static int run_serve(int argc, char **argv) {
     else if (cfg.server_port_set)
         port = cfg.server_port;
     else
-        port = 18153;
+        port = 18083;
 
     relay_log("[relay] v%s platform=%s relays=%d boards=%d bind=%s port=%d base_path=%s dry_run=%d",
               RELAY_VERSION, cfg.platform, cfg.n_relays, cfg.n_boards,

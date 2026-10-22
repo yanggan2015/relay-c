@@ -3,7 +3,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 set "PATH=C:\msys64\mingw64\bin;%PATH%"
-set "PORT=18153"
+set "PORT=18083"
 set "PKG=%~dp0output\relay"
 
 if not exist "boards.json" (

@@ -6,7 +6,7 @@
 2. `GET http://{host}:18081/relay/api/help`
 3. `GET http://{host}:18081/relay/help`
 
-直连本机：`http://127.0.0.1:18153/relay/...`
+直连本机：`http://127.0.0.1:18083/relay/...`
 
 PowerShell 用 `curl.exe`。写操作均为 GET（query）。
 

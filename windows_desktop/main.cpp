@@ -19,7 +19,7 @@
 
 namespace {
 
-constexpr int kDefaultHttpPort = 18153;
+constexpr int kDefaultHttpPort = 18083;
 constexpr int kHealthTimeoutMs = 30000;
 constexpr int kHealthIntervalMs = 200;
 constexpr const wchar_t *kChildExe = L"relay.exe";

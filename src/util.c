@@ -474,7 +474,7 @@ int relay_resolve_config_path(char *dst, size_t cap, const char *explicit_path) 
 
 static const char *k_default_empty_config =
     "{\"eadk\":{\"tool\":\"relay\"},"
-    "\"server\":{\"port\":18053,\"discoverable\":false,\"display_name\":\"relay\"},"
+    "\"server\":{\"port\":18083,\"discoverable\":false,\"display_name\":\"relay\"},"
     "\"relays\":{},\"boards\":{}}\n";
 
 int relay_resolve_or_create_config_path(char *dst, size_t cap, const char *explicit_path) {

@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-set "PORT=18153"
+set "PORT=18083"
 if not exist "boards.json" (
   if exist "boards.json.example" copy /Y "boards.json.example" "boards.json" >nul
 )

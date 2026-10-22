@@ -13,7 +13,7 @@ copy boards.json.example boards.json
 run.bat
 ```
 
-浏览器打开：**http://127.0.0.1:18153/relay/**（控制页 `/` · 配置 `/config` · Agent 接口 `/help`）
+浏览器打开：**http://127.0.0.1:18083/relay/**（控制页 `/` · 配置 `/config` · Agent 接口 `/help`）
 
 无硬件时用模拟模式：
 

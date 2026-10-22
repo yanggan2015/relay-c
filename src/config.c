@@ -197,7 +197,7 @@ int relay_config_load(AppConfig *out, const char *path) {
     server = cJSON_GetObjectItemCaseSensitive(root, "server");
     if (cJSON_IsObject(server)) {
         if (cJSON_GetObjectItemCaseSensitive(server, "port")) {
-            out->server_port = json_int(server, "port", 18153);
+            out->server_port = json_int(server, "port", 18083);
             out->server_port_set = 1;
         }
         out->discoverable = json_bool(server, "discoverable", 1);
